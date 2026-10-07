@@ -10,12 +10,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import cl.duoc.gestiondocumentalcmq.ui.theme.GestionDocumentalCMQTheme
+import cl.duoc.gestiondocumentalcmq.viewmodel.LoginViewModel
 
 class MainActivity : ComponentActivity() {
 
@@ -31,10 +35,13 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun LoginScreen() {
+fun LoginScreen(
+    loginViewModel: LoginViewModel = viewModel()
+) {
 
-    var correo by remember { mutableStateOf("") }
-    var contraseña by remember { mutableStateOf("") }
+    val correo by loginViewModel.correo.collectAsState()
+    val contrasenna by loginViewModel.contrasenna.collectAsState()
+    val mensaje by loginViewModel.mensaje.collectAsState()
 
     Column(
         modifier = Modifier
@@ -50,15 +57,19 @@ fun LoginScreen() {
 
         OutlinedTextField(
             value = correo,
-            onValueChange = { correo = it },
+            onValueChange = {
+                loginViewModel.cambiarCorreo(it)
+            },
             label = {
                 Text("Correo")
             }
         )
 
         OutlinedTextField(
-            value = contraseña,
-            onValueChange = { contraseña = it },
+            value = contrasenna,
+            onValueChange = {
+                loginViewModel.cambiarContrasenna(it)
+            },
             label = {
                 Text("Contraseña")
             },
@@ -67,11 +78,18 @@ fun LoginScreen() {
 
         Button(
             onClick = {
-                // Más adelante agregaremos la lógica de inicio de sesión
+                loginViewModel.iniciarSesion()
             },
             modifier = Modifier.padding(top = 16.dp)
         ) {
             Text("Iniciar sesión")
+        }
+
+        if (mensaje.isNotEmpty()) {
+            Text(
+                text = mensaje,
+                modifier = Modifier.padding(top = 16.dp)
+            )
         }
     }
 }
