@@ -19,6 +19,7 @@ import cl.duoc.gestiondocumentalcmq.viewmodel.LoginViewModel
 
 @Composable
 fun LoginScreen(
+    onLoginExitoso: () -> Unit,
     loginViewModel: LoginViewModel = viewModel()
 ) {
 
@@ -59,6 +60,12 @@ fun LoginScreen(
             texto = "Iniciar sesión",
             onClick = {
                 loginViewModel.iniciarSesion()
+
+                if (loginViewModel.correo.value.isNotEmpty() &&
+                    loginViewModel.contrasenna.value.isNotEmpty()
+                ) {
+                    onLoginExitoso()
+                }
             },
             modifier = Modifier.padding(top = 16.dp)
         )
