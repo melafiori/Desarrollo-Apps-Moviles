@@ -21,13 +21,18 @@ import cl.duoc.gestiondocumentalcmq.ui.notificaciones.*
 import cl.duoc.gestiondocumentalcmq.ui.solicitudes.MisSolicitudesScreen
 import cl.duoc.gestiondocumentalcmq.ui.auditoria.AuditoriaScreen
 import cl.duoc.gestiondocumentalcmq.viewmodel.SolicitudesViewModel
+import androidx.compose.ui.platform.LocalContext
+import cl.duoc.gestiondocumentalcmq.viewmodel.SolicitudesViewModelFactory
 
 @Composable
 fun AppNavigation() {
 
     val navController = rememberNavController()
+    val context = LocalContext.current
     val loginViewModel: LoginViewModel = viewModel()
-    val solicitudesViewModel: SolicitudesViewModel = viewModel()
+    val solicitudesViewModel: SolicitudesViewModel = viewModel(
+        factory = SolicitudesViewModelFactory(context)
+    )
     val rol by loginViewModel.rol.collectAsState()
 
     NavHost(
