@@ -19,7 +19,8 @@ fun HomeScreen(
     onCapacitacionesClick: () -> Unit,
     onPerfilClick: () -> Unit,
     onHistorialClick: () -> Unit,
-    onNotificacionesClick: () -> Unit
+    onNotificacionesClick: () -> Unit,
+    onAuditoriaClick: () -> Unit
 )  {
 
     Column(
@@ -77,6 +78,12 @@ fun HomeScreen(
             onClick = onNotificacionesClick
         ) {
             Text("Notificaciones")
+        }
+
+        Button(
+            onClick = onAuditoriaClick
+        ) {
+            Text("Auditoría")
         }
     }
 }

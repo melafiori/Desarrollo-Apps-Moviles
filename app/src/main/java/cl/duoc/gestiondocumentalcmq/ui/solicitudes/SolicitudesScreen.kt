@@ -15,23 +15,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.runtime.collectAsState
+import cl.duoc.gestiondocumentalcmq.viewmodel.SolicitudesViewModel
 
 @Composable
-fun SolicitudesScreen() {
+fun SolicitudesScreen(
+    onMisSolicitudesClick: () -> Unit,
+    solicitudesViewModel: SolicitudesViewModel = viewModel()
+) {
 
-    var solicitudCreada by remember {
-        mutableStateOf(false)
-    }
     var menuAbierto by remember {
         mutableStateOf(false)
     }
 
-    var tipoSolicitud by remember {
-        mutableStateOf("")
-    }
-    var descripcion by remember {
-        mutableStateOf("")
-    }
+    val tipoSolicitud by solicitudesViewModel.tipoSolicitud.collectAsState()
+    val descripcion by solicitudesViewModel.descripcion.collectAsState()
+    val mensaje by solicitudesViewModel.mensaje.collectAsState()
+    val solicitudCreada by solicitudesViewModel.solicitudCreada.collectAsState()
 
     Column(
         modifier = Modifier
@@ -74,7 +75,7 @@ fun SolicitudesScreen() {
                     Text("Permiso administrativo")
                 },
                 onClick = {
-                    tipoSolicitud = "Permiso administrativo"
+                    solicitudesViewModel.cambiarTipoSolicitud("Permiso administrativo")
                     menuAbierto = false
                 }
             )
@@ -84,7 +85,7 @@ fun SolicitudesScreen() {
                     Text("Vacaciones")
                 },
                 onClick = {
-                    tipoSolicitud = "Vacaciones"
+                    solicitudesViewModel.cambiarTipoSolicitud("Vacaciones")
                     menuAbierto = false
                 }
             )
@@ -94,7 +95,7 @@ fun SolicitudesScreen() {
                     Text("Otro")
                 },
                 onClick = {
-                    tipoSolicitud = "Otro"
+                    solicitudesViewModel.cambiarTipoSolicitud("Otro")
                     menuAbierto = false
                 }
             )
@@ -103,7 +104,7 @@ fun SolicitudesScreen() {
         androidx.compose.material3.OutlinedTextField(
             value = descripcion,
             onValueChange = {
-                descripcion = it
+                solicitudesViewModel.cambiarDescripcion(it)
             },
             label = {
                 Text("Descripción")
@@ -112,18 +113,28 @@ fun SolicitudesScreen() {
 
         Button(
             onClick = {
-                solicitudCreada = true
-            }
+                solicitudesViewModel.validarSolicitud()
+            },
+            enabled = solicitudCreada == null
         ) {
             Text("Crear solicitud")
         }
 
-        if (solicitudCreada) {
-            Text(text = "Descripción: $descripcion")
+        Button(
+            onClick = onMisSolicitudesClick
+        ) {
+            Text("Ver mis solicitudes")
+        }
+
+        if (mensaje.isNotEmpty()) {
+            Text(text = mensaje)
+        }
+
+        solicitudCreada?.let { solicitud ->
             Text(text = "Solicitud creada correctamente")
-            Text(text = "Tipo: $tipoSolicitud")
-            Text(text = "Estado: Pendiente")
+            Text(text = "Tipo: ${solicitud.tipo}")
+            Text(text = "Descripción: ${solicitud.descripcion}")
+            Text(text = "Estado: ${solicitud.estado}")
         }
     }
 }
-

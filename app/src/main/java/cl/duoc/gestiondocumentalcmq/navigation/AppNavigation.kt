@@ -18,12 +18,16 @@ import cl.duoc.gestiondocumentalcmq.ui.solicitudes.SolicitudesScreen
 import cl.duoc.gestiondocumentalcmq.viewmodel.LoginViewModel
 import cl.duoc.gestiondocumentalcmq.ui.documentos.HistorialScreen
 import cl.duoc.gestiondocumentalcmq.ui.notificaciones.*
+import cl.duoc.gestiondocumentalcmq.ui.solicitudes.MisSolicitudesScreen
+import cl.duoc.gestiondocumentalcmq.ui.auditoria.AuditoriaScreen
+import cl.duoc.gestiondocumentalcmq.viewmodel.SolicitudesViewModel
 
 @Composable
 fun AppNavigation() {
 
     val navController = rememberNavController()
     val loginViewModel: LoginViewModel = viewModel()
+    val solicitudesViewModel: SolicitudesViewModel = viewModel()
     val rol by loginViewModel.rol.collectAsState()
 
     NavHost(
@@ -60,6 +64,9 @@ fun AppNavigation() {
                 },
                 onNotificacionesClick = {
                     navController.navigate("notificaciones")
+                },
+                onAuditoriaClick = {
+                    navController.navigate("auditoria")
                 }
             )
         }
@@ -109,7 +116,18 @@ fun AppNavigation() {
         }
 
         composable("solicitudes") {
-            SolicitudesScreen()
+            SolicitudesScreen(
+                onMisSolicitudesClick = {
+                    navController.navigate("misSolicitudes")
+                },
+                solicitudesViewModel = solicitudesViewModel
+            )
+        }
+
+        composable("misSolicitudes") {
+            MisSolicitudesScreen(
+                solicitudesViewModel = solicitudesViewModel
+            )
         }
 
         composable("capacitaciones") {
@@ -126,6 +144,10 @@ fun AppNavigation() {
 
         composable("notificaciones") {
             NotificacionesScreen()
+        }
+
+        composable("auditoria") {
+            AuditoriaScreen()
         }
     }
 }
