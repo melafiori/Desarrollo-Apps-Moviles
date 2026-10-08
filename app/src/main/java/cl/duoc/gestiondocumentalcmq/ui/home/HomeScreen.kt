@@ -13,9 +13,13 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun HomeScreen(
+    rol: String,
     onDocumentosClick: () -> Unit,
     onSolicitudesClick: () -> Unit,
-    onCapacitacionesClick: () -> Unit
+    onCapacitacionesClick: () -> Unit,
+    onPerfilClick: () -> Unit,
+    onHistorialClick: () -> Unit,
+    onNotificacionesClick: () -> Unit
 )  {
 
     Column(
@@ -26,13 +30,18 @@ fun HomeScreen(
         verticalArrangement = Arrangement.Center
     ) {
 
-        Text(
-            text = "Gestión Documental CMQ"
-        )
+        Text(text = "Gestión Documental CMQ")
+        Text(text = "Bienvenido/a")
+        Text(text = "Rol: $rol")
 
-        Text(
-            text = "Bienvenido/a"
-        )
+        if (rol == "Revisor") {
+            Button(
+                onClick = {
+                }
+            ) {
+                Text("Revisar documentos")
+            }
+        }
 
         Button(
             onClick = onDocumentosClick
@@ -53,9 +62,21 @@ fun HomeScreen(
         }
 
         Button(
-            onClick = { }
+            onClick = onPerfilClick
         ) {
             Text("Mi perfil")
+        }
+
+        Button(
+            onClick = onHistorialClick
+        ) {
+            Text("Historial")
+        }
+
+        Button(
+            onClick = onNotificacionesClick
+        ) {
+            Text("Notificaciones")
         }
     }
 }
