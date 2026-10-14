@@ -140,7 +140,7 @@ fun AppNavigation() {
         }
 
         composable("perfil") {
-            PerfilScreen()
+            PerfilScreen(rol = rol)
         }
 
         composable("historial") {
