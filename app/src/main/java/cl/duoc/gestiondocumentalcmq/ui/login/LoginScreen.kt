@@ -142,6 +142,23 @@ fun LoginScreen(
                         menuAbierto = false
                     }
                 )
+
+                DropdownMenuItem(
+                    text = { Text("Recursos Humanos") },
+                    onClick = {
+                        loginViewModel.seleccionarRol("Recursos Humanos")
+                        menuAbierto = false
+                    }
+                )
+
+                DropdownMenuItem(
+                    text = { Text("Administrador") },
+                    onClick = {
+                        loginViewModel.seleccionarRol("Administrador")
+                        menuAbierto = false
+                    }
+                )
+
             }
         }
 

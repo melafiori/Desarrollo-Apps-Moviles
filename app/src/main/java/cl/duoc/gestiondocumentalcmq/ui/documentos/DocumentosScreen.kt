@@ -36,6 +36,10 @@ import cl.duoc.gestiondocumentalcmq.ui.theme.LightPink
 import cl.duoc.gestiondocumentalcmq.ui.theme.MediumBrown
 import cl.duoc.gestiondocumentalcmq.ui.theme.SoftPink
 import cl.duoc.gestiondocumentalcmq.ui.theme.White
+import android.Manifest
+import android.content.pm.PackageManager
+import android.widget.Toast
+import androidx.core.content.ContextCompat
 
 @Composable
 fun DocumentosScreen(
@@ -69,6 +73,20 @@ fun DocumentosScreen(
     ) { imagen ->
         if (imagen != null) {
             fotoCapturada = true
+        }
+    }
+
+    val permisoCamara = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { concedido ->
+        if (concedido) {
+            tomarFoto.launch(null)
+        } else {
+            Toast.makeText(
+                context,
+                "Necesitas permitir el acceso a la cámara para tomar una foto.",
+                Toast.LENGTH_SHORT
+            ).show()
         }
     }
 
@@ -144,7 +162,16 @@ fun DocumentosScreen(
 
             Button(
                 onClick = {
-                    tomarFoto.launch(null)
+                    val tienePermiso = ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.CAMERA
+                    ) == PackageManager.PERMISSION_GRANTED
+
+                    if (tienePermiso) {
+                        tomarFoto.launch(null)
+                    } else {
+                        permisoCamara.launch(Manifest.permission.CAMERA)
+                    }
                 },
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(18.dp),
