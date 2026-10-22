@@ -9,5 +9,6 @@ data class SolicitudEntity(
     val id: Int = 0,
     val tipo: String,
     val descripcion: String,
-    val estado: String
+    val estado: String,
+    val correoUsuario: String = ""
 )
