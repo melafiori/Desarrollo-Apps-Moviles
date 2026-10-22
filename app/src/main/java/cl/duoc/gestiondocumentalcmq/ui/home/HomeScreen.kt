@@ -36,6 +36,7 @@ import cl.duoc.gestiondocumentalcmq.ui.theme.MediumBrown
 import cl.duoc.gestiondocumentalcmq.ui.theme.SoftPink
 import cl.duoc.gestiondocumentalcmq.ui.theme.White
 
+
 @Composable
 fun HomeScreen(
     rol: String,
@@ -53,7 +54,6 @@ fun HomeScreen(
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-
         Text(
             text = "Gestión Documental",
             color = MediumBrown,
@@ -76,85 +76,141 @@ fun HomeScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        if (rol == "Revisor") {
-            Button(
-                onClick = {},
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = SoftPink,
-                    contentColor = DarkBrown
+        when (rol) {
+            "Funcionario" -> {
+                TarjetaMenu(
+                    titulo = "Mis documentos",
+                    descripcion = "Consulta tus documentos",
+                    icono = Icons.Default.Description,
+                    onClick = onDocumentosClick
                 )
-            ) {
-                Text("Revisar documentos")
+
+                TarjetaMenu(
+                    titulo = "Mis solicitudes",
+                    descripcion = "Crea y consulta tus solicitudes",
+                    icono = Icons.Default.EventNote,
+                    onClick = onSolicitudesClick
+                )
+
+                TarjetaPequena(
+                    titulo = "Capacitaciones",
+                    icono = Icons.Default.School,
+                    onClick = onCapacitacionesClick
+                )
+
+                TarjetaPequena(
+                    titulo = "Mi perfil",
+                    icono = Icons.Default.Person,
+                    onClick = onPerfilClick
+                )
+
+                TarjetaPequena(
+                    titulo = "Notificaciones",
+                    icono = Icons.Default.Notifications,
+                    onClick = onNotificacionesClick
+                )
             }
-        }
 
-        TarjetaMenu(
-            titulo = "Mis documentos",
-            descripcion = "Consulta y gestiona tus documentos",
-            icono = Icons.Default.Description,
-            onClick = onDocumentosClick
-        )
+            "Revisor" -> {
+                TarjetaMenu(
+                    titulo = "Revisar documentos",
+                    descripcion = "Consulta y revisa los antecedentes",
+                    icono = Icons.Default.Description,
+                    onClick = onDocumentosClick
+                )
 
-        TarjetaMenu(
-            titulo = "Solicitudes",
-            descripcion = "Gestiona tus permisos y solicitudes",
-            icono = Icons.Default.EventNote,
-            onClick = onSolicitudesClick
-        )
+                TarjetaMenu(
+                    titulo = "Revisar solicitudes",
+                    descripcion = "Consulta las solicitudes registradas",
+                    icono = Icons.Default.EventNote,
+                    onClick = onSolicitudesClick
+                )
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            TarjetaPequena(
-                titulo = "Capacitaciones",
-                icono = Icons.Default.School,
-                onClick = onCapacitacionesClick,
-                modifier = Modifier.weight(1f)
-            )
+                TarjetaPequena(
+                    titulo = "Historial",
+                    icono = Icons.Default.History,
+                    onClick = onHistorialClick
+                )
 
-            TarjetaPequena(
-                titulo = "Mi perfil",
-                icono = Icons.Default.Person,
-                onClick = onPerfilClick,
-                modifier = Modifier.weight(1f)
-            )
-        }
+                TarjetaPequena(
+                    titulo = "Mi perfil",
+                    icono = Icons.Default.Person,
+                    onClick = onPerfilClick
+                )
+            }
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            TarjetaPequena(
-                titulo = "Historial",
-                icono = Icons.Default.History,
-                onClick = onHistorialClick,
-                modifier = Modifier.weight(1f)
-            )
+            "Recursos Humanos" -> {
+                TarjetaMenu(
+                    titulo = "Documentación laboral",
+                    descripcion = "Consulta los antecedentes laborales",
+                    icono = Icons.Default.Description,
+                    onClick = onDocumentosClick
+                )
 
-            TarjetaPequena(
-                titulo = "Notificaciones",
-                icono = Icons.Default.Notifications,
-                onClick = onNotificacionesClick,
-                modifier = Modifier.weight(1f)
-            )
-        }
+                TarjetaMenu(
+                    titulo = "Solicitudes",
+                    descripcion = "Consulta las solicitudes registradas",
+                    icono = Icons.Default.EventNote,
+                    onClick = onSolicitudesClick
+                )
 
-        Button(
-            onClick = onAuditoriaClick,
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = LightPink,
-                contentColor = DarkBrown
-            )
-        ) {
-            Text("Auditoría")
+                TarjetaPequena(
+                    titulo = "Capacitaciones",
+                    icono = Icons.Default.School,
+                    onClick = onCapacitacionesClick
+                )
+
+                TarjetaPequena(
+                    titulo = "Historial",
+                    icono = Icons.Default.History,
+                    onClick = onHistorialClick
+                )
+
+                TarjetaPequena(
+                    titulo = "Mi perfil",
+                    icono = Icons.Default.Person,
+                    onClick = onPerfilClick
+                )
+            }
+
+            "Administrador" -> {
+                TarjetaMenu(
+                    titulo = "Auditoría",
+                    descripcion = "Consulta los registros del sistema",
+                    icono = Icons.Default.History,
+                    onClick = onAuditoriaClick
+                )
+
+                TarjetaMenu(
+                    titulo = "Documentos",
+                    descripcion = "Accede a la pantalla de documentos disponible",
+                    icono = Icons.Default.Description,
+                    onClick = onDocumentosClick
+                )
+
+                TarjetaPequena(
+                    titulo = "Notificaciones",
+                    icono = Icons.Default.Notifications,
+                    onClick = onNotificacionesClick
+                )
+
+                TarjetaPequena(
+                    titulo = "Mi perfil",
+                    icono = Icons.Default.Person,
+                    onClick = onPerfilClick
+                )
+            }
+
+            else -> {
+                Text(
+                    text = "Selecciona un perfil válido para continuar.",
+                    color = DarkBrown
+                )
+            }
         }
     }
 }
+
 
 @Composable
 fun TarjetaMenu(

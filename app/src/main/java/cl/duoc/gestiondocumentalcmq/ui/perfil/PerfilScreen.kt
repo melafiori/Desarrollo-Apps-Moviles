@@ -25,7 +25,7 @@ import cl.duoc.gestiondocumentalcmq.ui.theme.MediumBrown
 import cl.duoc.gestiondocumentalcmq.ui.theme.White
 
 @Composable
-fun PerfilScreen() {
+fun PerfilScreen(rol: String) {
 
     Column(
         modifier = Modifier
@@ -98,7 +98,7 @@ fun PerfilScreen() {
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
-                    text = "Funcionaria",
+                    text = rol,
                     color = MediumBrown,
                     fontSize = 14.sp
                 )
