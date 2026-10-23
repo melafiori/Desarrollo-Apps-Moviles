@@ -18,6 +18,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -38,7 +39,8 @@ import cl.duoc.gestiondocumentalcmq.viewmodel.SolicitudesViewModel
 @Composable
 fun SolicitudesScreen(
     onMisSolicitudesClick: () -> Unit,
-    solicitudesViewModel: SolicitudesViewModel
+    solicitudesViewModel: SolicitudesViewModel,
+    correoUsuario: String
 ) {
     var menuAbierto by remember { mutableStateOf(false) }
 
@@ -46,6 +48,9 @@ fun SolicitudesScreen(
     val descripcion by solicitudesViewModel.descripcion.collectAsState()
     val mensaje by solicitudesViewModel.mensaje.collectAsState()
     val solicitudCreada by solicitudesViewModel.solicitudCreada.collectAsState()
+    LaunchedEffect(correoUsuario) {
+        solicitudesViewModel.limpiarSolicitudCreada()
+    }
 
     Column(
         modifier = Modifier
@@ -170,7 +175,7 @@ fun SolicitudesScreen(
 
         Button(
             onClick = {
-                solicitudesViewModel.validarSolicitud()
+                solicitudesViewModel.validarSolicitud(correoUsuario)
             },
             modifier = Modifier.fillMaxWidth(),
             enabled = solicitudCreada == null,

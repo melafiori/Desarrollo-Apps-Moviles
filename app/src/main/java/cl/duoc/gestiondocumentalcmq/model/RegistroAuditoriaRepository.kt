@@ -1,18 +1,23 @@
+
 package cl.duoc.gestiondocumentalcmq.model
 
-object RegistroAuditoriaRepository {
+class RegistroAuditoriaRepository(
+    private val dao: RegistroAuditoriaDao
+) {
 
-    val registros = mutableListOf<RegistroAuditoria>()
-
-    fun registrar(
+    suspend fun registrar(
         accion: String,
         usuario: String
     ) {
-        registros.add(
+        dao.insertar(
             RegistroAuditoria(
                 accion = accion,
                 usuario = usuario
             )
         )
+    }
+
+    suspend fun obtenerRegistros(): List<RegistroAuditoria> {
+        return dao.obtenerTodos()
     }
 }

@@ -170,9 +170,9 @@ fun LoginScreen(
                 loginViewModel.iniciarSesion()
 
                 if (
-                    loginViewModel.correo.value.isNotEmpty() &&
-                    loginViewModel.contrasenna.value.isNotEmpty() &&
-                    loginViewModel.rol.value.isNotEmpty()
+                    loginViewModel.correo.value.isNotBlank() &&
+                    loginViewModel.contrasenna.value.isNotBlank() &&
+                    loginViewModel.rol.value.isNotBlank()
                 ) {
                     onLoginExitoso()
                 }

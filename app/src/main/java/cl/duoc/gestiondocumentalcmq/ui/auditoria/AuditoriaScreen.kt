@@ -1,3 +1,4 @@
+
 package cl.duoc.gestiondocumentalcmq.ui.auditoria
 
 import androidx.compose.foundation.layout.Arrangement
@@ -12,10 +13,17 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import cl.duoc.gestiondocumentalcmq.model.DatabaseProvider
 import cl.duoc.gestiondocumentalcmq.model.RegistroAuditoria
 import cl.duoc.gestiondocumentalcmq.model.RegistroAuditoriaRepository
 import cl.duoc.gestiondocumentalcmq.ui.theme.DarkBrown
@@ -27,7 +35,23 @@ import cl.duoc.gestiondocumentalcmq.ui.theme.White
 @Composable
 fun AuditoriaScreen() {
 
-    val registros = RegistroAuditoriaRepository.registros
+    val context = LocalContext.current
+
+    val repository = remember(context) {
+        RegistroAuditoriaRepository(
+            DatabaseProvider
+                .obtenerDatabase(context)
+                .registroAuditoriaDao()
+        )
+    }
+
+    var registros by remember {
+        mutableStateOf<List<RegistroAuditoria>>(emptyList())
+    }
+
+    LaunchedEffect(repository) {
+        registros = repository.obtenerRegistros()
+    }
 
     Column(
         modifier = Modifier
@@ -35,7 +59,6 @@ fun AuditoriaScreen() {
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-
         Text(
             text = "Auditoría",
             color = DarkBrown,
@@ -52,7 +75,6 @@ fun AuditoriaScreen() {
         Spacer(modifier = Modifier.height(4.dp))
 
         if (registros.isEmpty()) {
-
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(20.dp),
@@ -60,7 +82,6 @@ fun AuditoriaScreen() {
                     containerColor = LightPink
                 )
             ) {
-
                 Text(
                     text = "No hay registros de auditoría disponibles.",
                     modifier = Modifier.padding(18.dp),
@@ -68,11 +89,8 @@ fun AuditoriaScreen() {
                     fontSize = 14.sp
                 )
             }
-
         } else {
-
             registros.forEach { registro ->
-
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(20.dp),
@@ -80,12 +98,10 @@ fun AuditoriaScreen() {
                         containerColor = White
                     )
                 ) {
-
                     Column(
                         modifier = Modifier.padding(20.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-
                         Text(
                             text = registro.accion,
                             color = DarkBrown,
@@ -99,7 +115,6 @@ fun AuditoriaScreen() {
                                 containerColor = LightPink
                             )
                         ) {
-
                             Text(
                                 text = "Usuario: ${registro.usuario}",
                                 modifier = Modifier.padding(

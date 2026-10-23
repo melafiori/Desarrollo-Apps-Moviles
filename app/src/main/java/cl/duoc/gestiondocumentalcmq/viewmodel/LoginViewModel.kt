@@ -1,11 +1,16 @@
+
 package cl.duoc.gestiondocumentalcmq.viewmodel
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import cl.duoc.gestiondocumentalcmq.model.DatabaseProvider
+import cl.duoc.gestiondocumentalcmq.model.RegistroAuditoriaRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import cl.duoc.gestiondocumentalcmq.model.RegistroAuditoriaRepository
+import kotlinx.coroutines.launch
 
-class LoginViewModel : ViewModel() {
+class LoginViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _correo = MutableStateFlow("")
     val correo: StateFlow<String> = _correo
@@ -19,6 +24,11 @@ class LoginViewModel : ViewModel() {
     private val _rol = MutableStateFlow("")
     val rol: StateFlow<String> = _rol
 
+    private val auditoriaRepository = RegistroAuditoriaRepository(
+        DatabaseProvider
+            .obtenerDatabase(application)
+            .registroAuditoriaDao()
+    )
 
     fun cambiarCorreo(valor: String) {
         _correo.value = valor
@@ -33,14 +43,22 @@ class LoginViewModel : ViewModel() {
     }
 
     fun iniciarSesion() {
-        if (_correo.value.isEmpty() || _contrasenna.value.isEmpty()) {
+        if (_correo.value.isBlank() || _contrasenna.value.isBlank()) {
             _mensaje.value = "Debe completar todos los campos"
         } else {
             _mensaje.value = "Inicio de sesión correcto"
-            RegistroAuditoriaRepository.registrar(
-                accion = "Inicio de sesión",
-                usuario = _rol.value
-            )
+
+            viewModelScope.launch {
+                try {
+                    auditoriaRepository.registrar(
+                        accion = "Inicio de sesión",
+                        usuario = _correo.value.trim()
+                    )
+                } catch (e: Exception) {
+                    // Un error de auditoría no impide continuar
+                    // con el inicio de sesión.
+                }
+            }
         }
     }
 }
