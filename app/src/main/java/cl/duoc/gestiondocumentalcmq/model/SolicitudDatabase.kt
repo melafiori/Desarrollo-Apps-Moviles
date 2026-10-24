@@ -8,9 +8,12 @@ import androidx.room.RoomDatabase
     entities = [
         SolicitudEntity::class,
         RegistroAuditoria::class,
-        RevisionSolicitudEntity::class
+        RevisionSolicitudEntity::class,
+        DocumentoEntity::class,
+        UsuarioEntity::class,
+        CapacitacionEntity::class
     ],
-    version = 4,
+    version = 7,
     exportSchema = false
 )
 abstract class SolicitudDatabase : RoomDatabase() {
@@ -20,4 +23,10 @@ abstract class SolicitudDatabase : RoomDatabase() {
     abstract fun registroAuditoriaDao(): RegistroAuditoriaDao
 
     abstract fun revisionSolicitudDao(): RevisionSolicitudDao
+
+    abstract fun documentoDao(): DocumentoDao
+
+    abstract fun usuarioDao(): UsuarioDao
+
+    abstract fun capacitacionDao(): CapacitacionDao
 }

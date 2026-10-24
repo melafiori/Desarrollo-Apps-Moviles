@@ -1,3 +1,4 @@
+
 package cl.duoc.gestiondocumentalcmq.ui.perfil
 
 import androidx.compose.foundation.layout.Arrangement
@@ -9,6 +10,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Text
@@ -25,7 +28,11 @@ import cl.duoc.gestiondocumentalcmq.ui.theme.MediumBrown
 import cl.duoc.gestiondocumentalcmq.ui.theme.White
 
 @Composable
-fun PerfilScreen(rol: String) {
+fun PerfilScreen(
+    rol: String,
+    correo: String,
+    onCerrarSesion: () -> Unit
+) {
 
     Column(
         modifier = Modifier
@@ -53,8 +60,7 @@ fun PerfilScreen(rol: String) {
         Spacer(modifier = Modifier.height(12.dp))
 
         Card(
-            modifier = Modifier
-                .fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(
                 containerColor = LightPink
@@ -69,15 +75,14 @@ fun PerfilScreen(rol: String) {
             ) {
 
                 Card(
-                    modifier = Modifier
-                        .padding(bottom = 12.dp),
+                    modifier = Modifier.padding(bottom = 12.dp),
                     shape = CircleShape,
                     colors = CardDefaults.cardColors(
                         containerColor = White
                     )
                 ) {
                     Text(
-                        text = "C",
+                        text = rol.firstOrNull()?.uppercase() ?: "U",
                         modifier = Modifier.padding(
                             horizontal = 24.dp,
                             vertical = 18.dp
@@ -89,7 +94,7 @@ fun PerfilScreen(rol: String) {
                 }
 
                 Text(
-                    text = "Carolina Rivera",
+                    text = "Cuenta CMQ",
                     color = DarkBrown,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.SemiBold
@@ -119,7 +124,7 @@ fun PerfilScreen(rol: String) {
             ) {
 
                 Text(
-                    text = "Datos personales",
+                    text = "Datos de la cuenta",
                     color = DarkBrown,
                     fontSize = 17.sp,
                     fontWeight = FontWeight.SemiBold
@@ -132,7 +137,7 @@ fun PerfilScreen(rol: String) {
                 )
 
                 Text(
-                    text = "carolina@cmq.cl",
+                    text = correo,
                     color = DarkBrown,
                     fontSize = 15.sp
                 )
@@ -150,6 +155,24 @@ fun PerfilScreen(rol: String) {
                 )
             }
         }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Button(
+            onClick = onCerrarSesion,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = DustyPink,
+                contentColor = White
+            )
+        ) {
+            Text(
+                text = "Cerrar sesión",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(vertical = 6.dp)
+            )
+        }
     }
 }
-//DATOS SIMULADOS DE PERFIL BTW

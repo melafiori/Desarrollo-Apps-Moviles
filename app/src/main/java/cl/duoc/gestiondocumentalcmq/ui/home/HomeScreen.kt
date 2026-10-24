@@ -1,3 +1,4 @@
+
 package cl.duoc.gestiondocumentalcmq.ui.home
 
 import androidx.compose.foundation.layout.Arrangement
@@ -9,6 +10,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Description
@@ -17,8 +20,7 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.School
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material.icons.filled.People
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -36,7 +38,6 @@ import cl.duoc.gestiondocumentalcmq.ui.theme.MediumBrown
 import cl.duoc.gestiondocumentalcmq.ui.theme.SoftPink
 import cl.duoc.gestiondocumentalcmq.ui.theme.White
 
-
 @Composable
 fun HomeScreen(
     rol: String,
@@ -46,14 +47,17 @@ fun HomeScreen(
     onPerfilClick: () -> Unit,
     onHistorialClick: () -> Unit,
     onNotificacionesClick: () -> Unit,
-    onAuditoriaClick: () -> Unit
+    onAuditoriaClick: () -> Unit,
+    onGestionUsuariosClick: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+
         Text(
             text = "Gestión Documental",
             color = MediumBrown,
@@ -77,7 +81,10 @@ fun HomeScreen(
         Spacer(modifier = Modifier.height(8.dp))
 
         when (rol) {
+
+            // FUNCIONARIO
             "Funcionario" -> {
+
                 TarjetaMenu(
                     titulo = "Mis documentos",
                     descripcion = "Consulta tus documentos",
@@ -111,7 +118,9 @@ fun HomeScreen(
                 )
             }
 
+            // REVISOR
             "Revisor" -> {
+
                 TarjetaMenu(
                     titulo = "Revisar documentos",
                     descripcion = "Consulta y revisa los antecedentes",
@@ -139,7 +148,9 @@ fun HomeScreen(
                 )
             }
 
+            // RECURSOS HUMANOS
             "Recursos Humanos" -> {
+
                 TarjetaMenu(
                     titulo = "Documentación laboral",
                     descripcion = "Consulta los antecedentes laborales",
@@ -173,19 +184,21 @@ fun HomeScreen(
                 )
             }
 
+            // ADMINISTRADOR
             "Administrador" -> {
+
+                TarjetaMenu(
+                    titulo = "Gestión de usuarios",
+                    descripcion = "Crea, edita y administra las cuentas y roles del sistema",
+                    icono = Icons.Default.People,
+                    onClick = onGestionUsuariosClick
+                )
+
                 TarjetaMenu(
                     titulo = "Auditoría",
                     descripcion = "Consulta los registros del sistema",
                     icono = Icons.Default.History,
                     onClick = onAuditoriaClick
-                )
-
-                TarjetaMenu(
-                    titulo = "Documentos",
-                    descripcion = "Accede a la pantalla de documentos disponible",
-                    icono = Icons.Default.Description,
-                    onClick = onDocumentosClick
                 )
 
                 TarjetaPequena(
@@ -210,7 +223,6 @@ fun HomeScreen(
         }
     }
 }
-
 
 @Composable
 fun TarjetaMenu(
@@ -241,6 +253,7 @@ fun TarjetaMenu(
             Spacer(modifier = Modifier.width(16.dp))
 
             Column {
+
                 Text(
                     text = titulo,
                     color = DarkBrown,

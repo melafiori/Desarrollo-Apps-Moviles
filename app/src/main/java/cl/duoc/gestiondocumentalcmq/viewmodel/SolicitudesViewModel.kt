@@ -1,4 +1,3 @@
-
 package cl.duoc.gestiondocumentalcmq.viewmodel
 
 import android.content.Context
@@ -16,11 +15,12 @@ import cl.duoc.gestiondocumentalcmq.model.SolicitudRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 
 class SolicitudesViewModel(context: Context) : ViewModel() {
 
     // BASE DE DATOS Y REPOSITORIOS
-
     private val database = DatabaseProvider.obtenerDatabase(
         context.applicationContext
     )
@@ -34,8 +34,30 @@ class SolicitudesViewModel(context: Context) : ViewModel() {
     private val revisionSolicitudRepository =
         RevisionSolicitudRepository(database.revisionSolicitudDao())
 
-    // ESTADOS DEL FORMULARIO
+    // Control de operaciones y datos temporales por sesión.
+    private var versionEstado = 0L
 
+    private val trabajosSesion = mutableListOf<Job>()
+
+    // Ejecutar operaciones asociadas a la sesión actual.
+    private fun ejecutarOperacionSesion(
+        operacion: suspend (Long) -> Unit
+    ) {
+        val versionActual = versionEstado
+
+        val trabajo = viewModelScope.launch {
+            try {
+                operacion(versionActual)
+            } catch (e: CancellationException) {
+                throw e
+            }
+        }
+
+        trabajosSesion.removeAll { !it.isActive }
+        trabajosSesion.add(trabajo)
+    }
+
+    // ESTADOS DEL FORMULARIO
     private val _tipoSolicitud = MutableStateFlow("")
     val tipoSolicitud: StateFlow<String> = _tipoSolicitud
 
@@ -84,6 +106,35 @@ class SolicitudesViewModel(context: Context) : ViewModel() {
 
     // LIMPIEZA DE ESTADOS
 
+    // Limpiar datos temporales al cerrar sesión.
+    fun limpiarEstadoSesion() {
+
+        // Invalidar operaciones de la sesión anterior.
+        versionEstado++
+
+        // Cancelar operaciones pendientes.
+        trabajosSesion.forEach { it.cancel() }
+        trabajosSesion.clear()
+
+        // Limpiar formulario.
+        _tipoSolicitud.value = ""
+        _descripcion.value = ""
+        _mensaje.value = ""
+        _solicitudCreada.value = null
+
+        // Limpiar estados de revisión.
+        _decisionGuardada.value = false
+        _decisionFallida.value = false
+
+        // Limpiar listas de solicitudes.
+        _solicitudesGuardadas.value = emptyList()
+        _solicitudesRevision.value = emptyList()
+
+        // Limpiar historial.
+        _historialSolicitud.value = emptyList()
+        _cargandoHistorial.value = false
+    }
+
     fun limpiarSolicitudCreada() {
         _solicitudCreada.value = null
         _mensaje.value = ""
@@ -121,8 +172,8 @@ class SolicitudesViewModel(context: Context) : ViewModel() {
         return true
     }
 
-    // CREAR SOLICITUD
 
+    // CREAR SOLICITUD
     fun validarSolicitud(correoUsuario: String) {
         val tipo = _tipoSolicitud.value.trim()
         val descripcionTexto = _descripcion.value.trim()
@@ -138,7 +189,9 @@ class SolicitudesViewModel(context: Context) : ViewModel() {
             return
         }
 
-        if (!descripcionValida(descripcionTexto)) return
+        if (!descripcionValida(descripcionTexto)) {
+            return
+        }
 
         val solicitud = Solicitud(
             tipo = tipo,
@@ -146,8 +199,15 @@ class SolicitudesViewModel(context: Context) : ViewModel() {
             estado = "Pendiente de revisión"
         )
 
-        viewModelScope.launch {
+        ejecutarOperacionSesion { versionActual ->
             try {
+                // Verificar que la sesión siga siendo la misma.
+                if (versionActual != versionEstado) {
+                    return@ejecutarOperacionSesion
+                }
+
+                // Guardar solicitud, historial y auditoría
+                // dentro de una misma transacción.
                 val solicitudIdCreada = database.withTransaction {
                     val id = repository.insertarSolicitud(
                         SolicitudEntity(
@@ -174,86 +234,172 @@ class SolicitudesViewModel(context: Context) : ViewModel() {
                     id
                 }
 
-                recargarSolicitudes(correo)
-                recargarBandejaRevision()
+                // No mostrar resultados de una sesión anterior.
+                if (versionActual != versionEstado) {
+                    return@ejecutarOperacionSesion
+                }
 
-                _historialSolicitud.value =
+                recargarSolicitudes(correo, versionActual)
+                recargarBandejaRevision(versionActual)
+
+                val historial =
                     revisionSolicitudRepository
                         .obtenerHistorialPorSolicitud(
                             solicitudIdCreada
                         )
 
+                if (versionActual != versionEstado) {
+                    return@ejecutarOperacionSesion
+                }
+
+                _historialSolicitud.value = historial
                 _solicitudCreada.value = solicitud
                 _mensaje.value = "Solicitud creada correctamente"
 
+            } catch (e: CancellationException) {
+                throw e
+
             } catch (e: Exception) {
-                _mensaje.value = "No se pudo guardar la solicitud"
+                if (versionActual == versionEstado) {
+                    _mensaje.value =
+                        "No se pudo guardar la solicitud"
+                }
             }
         }
     }
 
     // CONSULTAR SOLICITUDES DEL FUNCIONARIO
-
     fun cargarSolicitudes(correoUsuario: String) {
-        viewModelScope.launch {
+        val correo = correoUsuario.trim()
+
+        if (correo.isBlank()) {
+            _mensaje.value = "No se pudo identificar al usuario"
+            return
+        }
+
+        ejecutarOperacionSesion { versionActual ->
             try {
-                recargarSolicitudes(correoUsuario.trim())
+                if (versionActual != versionEstado) {
+                    return@ejecutarOperacionSesion
+                }
+
+                recargarSolicitudes(correo, versionActual)
+
+            } catch (e: CancellationException) {
+                throw e
+
             } catch (e: Exception) {
-                _mensaje.value =
-                    "No se pudieron cargar las solicitudes"
+                if (versionActual == versionEstado) {
+                    _mensaje.value =
+                        "No se pudieron cargar las solicitudes"
+                }
             }
         }
     }
 
     // CONSULTAR SOLICITUDES PARA REVISION
-
     fun cargarTodasLasSolicitudes() {
-        viewModelScope.launch {
+        ejecutarOperacionSesion { versionActual ->
             try {
-                recargarBandejaRevision()
+                if (versionActual != versionEstado) {
+                    return@ejecutarOperacionSesion
+                }
+
+                recargarBandejaRevision(versionActual)
+
+            } catch (e: CancellationException) {
+                throw e
+
             } catch (e: Exception) {
-                _mensaje.value =
-                    "No se pudo cargar la bandeja de revisión"
+                if (versionActual == versionEstado) {
+                    _mensaje.value =
+                        "No se pudo cargar la bandeja de revisión"
+                }
             }
         }
     }
 
+    // Recargar solicitudes del funcionario.
     private suspend fun recargarSolicitudes(
-        correoUsuario: String
+        correoUsuario: String,
+        versionActual: Long
     ) {
-        _solicitudesGuardadas.value =
+        // No consultar datos para una sesión anterior.
+        if (versionActual != versionEstado) return
+
+        val solicitudes =
             repository.obtenerSolicitudesPorCorreo(
                 correoUsuario.trim()
             )
-    }
 
-    private suspend fun recargarBandejaRevision() {
-        _solicitudesRevision.value =
-            repository.obtenerSolicitudes()
-                .sortedByDescending { it.id }
-    }
-
-    // CONSULTAR HISTORIAL
-    fun cargarHistorial(solicitudId: Int) {
-        _historialSolicitud.value = emptyList()
-        _cargandoHistorial.value = true
-
-        viewModelScope.launch {
-            try {
-                _historialSolicitud.value =
-                    revisionSolicitudRepository
-                        .obtenerHistorialPorSolicitud(solicitudId)
-
-            } catch (e: Exception) {
-                _historialSolicitud.value = emptyList()
-                _mensaje.value = "No se pudo cargar el historial"
-
-            } finally {
-                _cargandoHistorial.value = false
-            }
+        // Publicar resultados solo si la sesión sigue vigente.
+        if (versionActual == versionEstado) {
+            _solicitudesGuardadas.value = solicitudes
         }
     }
 
+    // Recargar bandeja de revisión.
+    private suspend fun recargarBandejaRevision(
+        versionActual: Long
+    ) {
+        if (versionActual != versionEstado) return
+
+        val solicitudes =
+            repository.obtenerSolicitudes()
+                .sortedByDescending { it.id }
+
+        if (versionActual == versionEstado) {
+            _solicitudesRevision.value = solicitudes
+        }
+    }
+
+    // CONSULTAR HISTORIAL DE UNA SOLICITUD
+    fun cargarHistorial(solicitudId: Int) {
+
+        // Limpiar el historial anterior.
+        _historialSolicitud.value = emptyList()
+        _cargandoHistorial.value = true
+
+        ejecutarOperacionSesion { versionActual ->
+            try {
+                // Comprobar que la sesión siga vigente.
+                if (versionActual != versionEstado) {
+                    return@ejecutarOperacionSesion
+                }
+
+                // Consultar historial en Room.
+                val historial =
+                    revisionSolicitudRepository
+                        .obtenerHistorialPorSolicitud(
+                            solicitudId
+                        )
+
+                // Mostrar resultados solo si la sesión
+                // sigue siendo la misma.
+                if (versionActual != versionEstado) {
+                    return@ejecutarOperacionSesion
+                }
+
+                _historialSolicitud.value = historial
+
+            } catch (e: CancellationException) {
+                throw e
+
+            } catch (e: Exception) {
+                if (versionActual == versionEstado) {
+                    _historialSolicitud.value = emptyList()
+                    _mensaje.value =
+                        "No se pudo cargar el historial"
+                }
+
+            } finally {
+                // Evitar modificar el estado de una sesión nueva.
+                if (versionActual == versionEstado) {
+                    _cargandoHistorial.value = false
+                }
+            }
+        }
+    }
 
     // EDITAR Y REENVIAR SOLICITUD OBSERVADA
     fun actualizarSolicitud(
@@ -289,14 +435,21 @@ class SolicitudesViewModel(context: Context) : ViewModel() {
         }
 
         if (tipo.isBlank()) {
-            _mensaje.value = "Debe seleccionar un tipo de solicitud"
+            _mensaje.value =
+                "Debe seleccionar un tipo de solicitud"
             return
         }
 
-        if (!descripcionValida(descripcionTexto)) return
+        if (!descripcionValida(descripcionTexto)) {
+            return
+        }
 
-        viewModelScope.launch {
+        ejecutarOperacionSesion { versionActual ->
             try {
+                if (versionActual != versionEstado) {
+                    return@ejecutarOperacionSesion
+                }
+
                 database.withTransaction {
                     repository.actualizarSolicitud(
                         solicitud.copy(
@@ -321,25 +474,41 @@ class SolicitudesViewModel(context: Context) : ViewModel() {
                     )
                 }
 
-                recargarSolicitudes(correo)
-                recargarBandejaRevision()
+                if (versionActual != versionEstado) {
+                    return@ejecutarOperacionSesion
+                }
 
-                _historialSolicitud.value =
+                recargarSolicitudes(correo, versionActual)
+                recargarBandejaRevision(versionActual)
+
+                val historial =
                     revisionSolicitudRepository
-                        .obtenerHistorialPorSolicitud(solicitud.id)
+                        .obtenerHistorialPorSolicitud(
+                            solicitud.id
+                        )
+
+                if (versionActual != versionEstado) {
+                    return@ejecutarOperacionSesion
+                }
+
+                _historialSolicitud.value = historial
 
                 _mensaje.value =
                     "Solicitud corregida y enviada nuevamente a revisión"
 
+            } catch (e: CancellationException) {
+                throw e
+
             } catch (e: Exception) {
-                _mensaje.value =
-                    "No se pudo reenviar la solicitud"
+                if (versionActual == versionEstado) {
+                    _mensaje.value =
+                        "No se pudo reenviar la solicitud"
+                }
             }
         }
     }
 
     // ELIMINAR SOLICITUD EN BORRADOR
-
     fun eliminarSolicitud(
         solicitud: SolicitudEntity,
         correoUsuario: String
@@ -368,29 +537,53 @@ class SolicitudesViewModel(context: Context) : ViewModel() {
             return
         }
 
-        viewModelScope.launch {
+        ejecutarOperacionSesion { versionActual ->
             try {
-                repository.eliminarSolicitud(solicitud)
+                // Comprobar que la sesión siga vigente.
+                if (versionActual != versionEstado) {
+                    return@ejecutarOperacionSesion
+                }
 
-                auditoriaRepository.registrar(
-                    accion = "Solicitud eliminada: ${solicitud.id}",
-                    usuario = correo
-                )
+                // Eliminar y registrar auditoría
+                // dentro de una misma transacción.
+                database.withTransaction {
+                    repository.eliminarSolicitud(solicitud)
 
-                recargarSolicitudes(correo)
-                recargarBandejaRevision()
+                    auditoriaRepository.registrar(
+                        accion = "Solicitud eliminada: ${solicitud.id}",
+                        usuario = correo
+                    )
+                }
 
-                _mensaje.value = "Solicitud eliminada correctamente"
+                // No actualizar datos de una sesión anterior.
+                if (versionActual != versionEstado) {
+                    return@ejecutarOperacionSesion
+                }
+
+                recargarSolicitudes(correo, versionActual)
+                recargarBandejaRevision(versionActual)
+
+                if (versionActual != versionEstado) {
+                    return@ejecutarOperacionSesion
+                }
+
+                _mensaje.value =
+                    "Solicitud eliminada correctamente"
+
+            } catch (e: CancellationException) {
+                throw e
 
             } catch (e: Exception) {
-                _mensaje.value = "No se pudo eliminar la solicitud"
+                if (versionActual == versionEstado) {
+                    _mensaje.value =
+                        "No se pudo eliminar la solicitud"
+                }
             }
         }
     }
 
+
     // APROBAR, OBSERVAR O RECHAZAR SOLICITUD
-
-
     fun resolverSolicitud(
         solicitud: SolicitudEntity,
         nuevoEstado: String,
@@ -448,8 +641,15 @@ class SolicitudesViewModel(context: Context) : ViewModel() {
             return
         }
 
-        viewModelScope.launch {
+        ejecutarOperacionSesion { versionActual ->
             try {
+                // Comprobar que la sesión siga vigente.
+                if (versionActual != versionEstado) {
+                    return@ejecutarOperacionSesion
+                }
+
+                // Guardar la decisión, el historial y la auditoría
+                // dentro de una misma transacción.
                 database.withTransaction {
                     repository.actualizarSolicitud(
                         solicitud.copy(
@@ -472,31 +672,47 @@ class SolicitudesViewModel(context: Context) : ViewModel() {
                     )
                 }
 
-                recargarBandejaRevision()
+                // No publicar resultados de una sesión anterior.
+                if (versionActual != versionEstado) {
+                    return@ejecutarOperacionSesion
+                }
 
-                _historialSolicitud.value =
+                recargarBandejaRevision(versionActual)
+
+                val historial =
                     revisionSolicitudRepository
                         .obtenerHistorialPorSolicitud(
                             solicitud.id
                         )
 
+                if (versionActual != versionEstado) {
+                    return@ejecutarOperacionSesion
+                }
+
+                _historialSolicitud.value = historial
+
                 _mensaje.value =
                     "Solicitud marcada como $estadoDestino"
 
                 _decisionGuardada.value = true
+                _decisionFallida.value = false
+
+            } catch (e: CancellationException) {
+                throw e
 
             } catch (e: Exception) {
-                _decisionGuardada.value = false
-                _decisionFallida.value = true
-                _mensaje.value =
-                    "No se pudo registrar la decisión"
+                if (versionActual == versionEstado) {
+                    _decisionGuardada.value = false
+                    _decisionFallida.value = true
+
+                    _mensaje.value =
+                        "No se pudo registrar la decisión"
+                }
             }
         }
     }
 
-
     // REGISTRAR CAMBIOS EN EL HISTORIAL
-
     private suspend fun registrarRevision(
         solicitudId: Int,
         estadoAnterior: String,

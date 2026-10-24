@@ -1,3 +1,4 @@
+
 package cl.duoc.gestiondocumentalcmq.ui.login
 
 import androidx.compose.foundation.layout.Arrangement
@@ -7,45 +8,44 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import cl.duoc.gestiondocumentalcmq.ui.components.BotonPrincipal
 import cl.duoc.gestiondocumentalcmq.ui.components.CampoTexto
 import cl.duoc.gestiondocumentalcmq.ui.theme.DarkBrown
-import cl.duoc.gestiondocumentalcmq.ui.theme.LightPink
 import cl.duoc.gestiondocumentalcmq.ui.theme.MediumBrown
 import cl.duoc.gestiondocumentalcmq.ui.theme.SoftPink
 import cl.duoc.gestiondocumentalcmq.viewmodel.LoginViewModel
-import androidx.compose.foundation.layout.Box
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
 fun LoginScreen(
     onLoginExitoso: () -> Unit,
     loginViewModel: LoginViewModel = viewModel()
 ) {
+
     val correo by loginViewModel.correo.collectAsState()
     val contrasenna by loginViewModel.contrasenna.collectAsState()
     val mensaje by loginViewModel.mensaje.collectAsState()
-    val rol by loginViewModel.rol.collectAsState()
+    val loginExitoso by loginViewModel.loginExitoso.collectAsState()
+    val cargando by loginViewModel.cargando.collectAsState()
 
-    var menuAbierto by remember { mutableStateOf(false) }
+    // Navegar solamente cuando Room confirme las credenciales.
+    LaunchedEffect(loginExitoso) {
+        if (loginExitoso) {
+            onLoginExitoso()
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -83,7 +83,9 @@ fun LoginScreen(
 
         CampoTexto(
             valor = correo,
-            onValorCambio = { loginViewModel.cambiarCorreo(it) },
+            onValorCambio = {
+                loginViewModel.cambiarCorreo(it)
+            },
             etiqueta = "Correo",
             modifier = Modifier.fillMaxWidth()
         )
@@ -92,100 +94,37 @@ fun LoginScreen(
 
         CampoTexto(
             valor = contrasenna,
-            onValorCambio = { loginViewModel.cambiarContrasenna(it) },
+            onValorCambio = {
+                loginViewModel.cambiarContrasenna(it)
+            },
             etiqueta = "Contraseña",
             modifier = Modifier.fillMaxWidth(),
             visualTransformation = PasswordVisualTransformation()
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Box(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-
-            Button(
-                onClick = { menuAbierto = true },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = LightPink,
-                    contentColor = DarkBrown
-                )
-            ) {
-                Text(
-                    text = if (rol.isEmpty()) {
-                        "Seleccionar rol"
-                    } else {
-                        rol
-                    }
-                )
-            }
-
-            DropdownMenu(
-                expanded = menuAbierto,
-                onDismissRequest = { menuAbierto = false },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                DropdownMenuItem(
-                    text = { Text("Funcionario") },
-                    onClick = {
-                        loginViewModel.seleccionarRol("Funcionario")
-                        menuAbierto = false
-                    }
-                )
-
-                DropdownMenuItem(
-                    text = { Text("Revisor") },
-                    onClick = {
-                        loginViewModel.seleccionarRol("Revisor")
-                        menuAbierto = false
-                    }
-                )
-
-                DropdownMenuItem(
-                    text = { Text("Recursos Humanos") },
-                    onClick = {
-                        loginViewModel.seleccionarRol("Recursos Humanos")
-                        menuAbierto = false
-                    }
-                )
-
-                DropdownMenuItem(
-                    text = { Text("Administrador") },
-                    onClick = {
-                        loginViewModel.seleccionarRol("Administrador")
-                        menuAbierto = false
-                    }
-                )
-
-            }
-        }
-
         Spacer(modifier = Modifier.height(24.dp))
 
-        BotonPrincipal(
-            texto = "Iniciar sesión",
-            onClick = {
-                loginViewModel.iniciarSesion()
-
-                if (
-                    loginViewModel.correo.value.isNotBlank() &&
-                    loginViewModel.contrasenna.value.isNotBlank() &&
-                    loginViewModel.rol.value.isNotBlank()
-                ) {
-                    onLoginExitoso()
-                }
-            },
-            modifier = Modifier.fillMaxWidth()
-        )
+        if (cargando) {
+            CircularProgressIndicator(
+                color = SoftPink
+            )
+        } else {
+            BotonPrincipal(
+                texto = "Iniciar sesión",
+                onClick = {
+                    loginViewModel.iniciarSesion()
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
 
         if (mensaje.isNotEmpty()) {
+
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
                 text = mensaje,
-                color = if (mensaje.contains("correcto")) {
+                color = if (loginExitoso) {
                     SoftPink
                 } else {
                     DarkBrown
