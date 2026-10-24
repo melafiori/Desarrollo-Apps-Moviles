@@ -15,6 +15,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -189,6 +190,22 @@ fun SolicitudesScreen(
         ) {
             Text(
                 text = "Crear solicitud",
+                fontWeight = FontWeight.Medium
+            )
+        }
+
+        // Guardar la solicitud sin enviarla al Revisor.
+        OutlinedButton(
+            onClick = {
+                solicitudesViewModel.guardarBorrador(correoUsuario)
+            },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = solicitudCreada == null,
+            shape = RoundedCornerShape(18.dp)
+        ) {
+            Text(
+                text = "Guardar borrador",
+                color = DarkBrown,
                 fontWeight = FontWeight.Medium
             )
         }

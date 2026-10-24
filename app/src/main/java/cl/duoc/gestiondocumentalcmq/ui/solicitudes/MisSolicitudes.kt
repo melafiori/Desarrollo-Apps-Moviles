@@ -51,10 +51,12 @@ fun MisSolicitudesScreen(
     solicitudesViewModel: SolicitudesViewModel,
     correoUsuario: String
 ) {
+    // Cargar las solicitudes del funcionario.
     LaunchedEffect(correoUsuario) {
         solicitudesViewModel.cargarSolicitudes(correoUsuario)
     }
 
+    // Estados del ViewModel.
     val solicitudesGuardadas by
     solicitudesViewModel.solicitudesGuardadas.collectAsState()
 
@@ -64,16 +66,32 @@ fun MisSolicitudesScreen(
     val historialSolicitud by
     solicitudesViewModel.historialSolicitud.collectAsState()
 
+    val cargandoHistorial by
+    solicitudesViewModel.cargandoHistorial.collectAsState()
+
+    // Solicitud seleccionada para corregir o editar.
     var solicitudEnEdicion by remember {
         mutableStateOf<SolicitudEntity?>(null)
     }
 
+    // Solicitud seleccionada para consultar historial.
     var solicitudHistorial by remember {
         mutableStateOf<SolicitudEntity?>(null)
     }
 
-    var nuevoTipo by remember { mutableStateOf("") }
-    var nuevaDescripcion by remember { mutableStateOf("") }
+    // Borrador seleccionado para eliminar.
+    var solicitudParaEliminar by remember {
+        mutableStateOf<SolicitudEntity?>(null)
+    }
+
+    // Campos utilizados para editar solicitudes.
+    var nuevoTipo by remember {
+        mutableStateOf("")
+    }
+
+    var nuevaDescripcion by remember {
+        mutableStateOf("")
+    }
 
     Column(
         modifier = Modifier
@@ -95,6 +113,7 @@ fun MisSolicitudesScreen(
             fontSize = 14.sp
         )
 
+        // Mostrar mensajes del ViewModel.
         if (mensaje.isNotBlank()) {
             Text(
                 text = mensaje,
@@ -103,7 +122,9 @@ fun MisSolicitudesScreen(
             )
         }
 
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(
+            modifier = Modifier.height(4.dp)
+        )
 
         if (solicitudesGuardadas.isEmpty()) {
             Card(
@@ -121,7 +142,10 @@ fun MisSolicitudesScreen(
                 )
             }
         } else {
+
+            // Mostrar solicitudes guardadas.
             solicitudesGuardadas.forEach { solicitud ->
+
                 AnimatedVisibility(
                     visible = true,
                     enter = fadeIn() + slideInVertically()
@@ -163,7 +187,8 @@ fun MisSolicitudesScreen(
                                 fontSize = 12.sp
                             )
 
-                            if (solicitud.estado.equals(
+                            if (
+                                solicitud.estado.equals(
                                     "Observada",
                                     ignoreCase = true
                                 )
@@ -176,6 +201,7 @@ fun MisSolicitudesScreen(
                                 )
                             }
 
+                            // Ver historial y editar cuando corresponda.
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -192,7 +218,13 @@ fun MisSolicitudesScreen(
                                     Text("Ver historial")
                                 }
 
-                                if (solicitud.estado.equals(
+                                // Editar borradores o corregir observadas.
+                                if (
+                                    solicitud.estado.equals(
+                                        "Borrador",
+                                        ignoreCase = true
+                                    ) ||
+                                    solicitud.estado.equals(
                                         "Observada",
                                         ignoreCase = true
                                     )
@@ -206,8 +238,39 @@ fun MisSolicitudesScreen(
                                                 solicitud.descripcion
                                         }
                                     ) {
-                                        Text("Corregir")
+                                        Text(
+                                            if (
+                                                solicitud.estado.equals(
+                                                    "Borrador",
+                                                    ignoreCase = true
+                                                )
+                                            ) {
+                                                "Editar borrador"
+                                            } else {
+                                                "Corregir"
+                                            }
+                                        )
                                     }
+                                }
+                            }
+
+                            // Solo los borradores pueden eliminarse.
+                            if (
+                                solicitud.estado.equals(
+                                    "Borrador",
+                                    ignoreCase = true
+                                )
+                            ) {
+                                OutlinedButton(
+                                    onClick = {
+                                        solicitudParaEliminar = solicitud
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(
+                                        text = "Eliminar borrador",
+                                        color = DustyPink
+                                    )
                                 }
                             }
                         }
@@ -217,36 +280,63 @@ fun MisSolicitudesScreen(
         }
     }
 
+    // DIÁLOGO PARA EDITAR BORRADORES O CORREGIR OBSERVADAS.
     solicitudEnEdicion?.let { solicitud ->
+
+        val esBorrador = solicitud.estado.equals(
+            "Borrador",
+            ignoreCase = true
+        )
+
         AlertDialog(
             onDismissRequest = {
                 solicitudEnEdicion = null
             },
             title = {
-                Text("Corregir solicitud")
+                Text(
+                    if (esBorrador) {
+                        "Editar borrador"
+                    } else {
+                        "Corregir solicitud"
+                    }
+                )
             },
             text = {
                 Column(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        text = "Corrige los datos solicitados y vuelve a enviar la solicitud.",
+                        text = if (esBorrador) {
+                            "Modifica los datos del borrador. " +
+                                    "Los cambios se guardarán sin enviarlo a revisión."
+                        } else {
+                            "Corrige los datos solicitados y vuelve " +
+                                    "a enviar la solicitud."
+                        },
                         color = MediumBrown,
                         fontSize = 13.sp
                     )
 
                     OutlinedTextField(
                         value = nuevoTipo,
-                        onValueChange = { nuevoTipo = it },
-                        label = { Text("Tipo de solicitud") },
+                        onValueChange = {
+                            nuevoTipo = it
+                        },
+                        label = {
+                            Text("Tipo de solicitud")
+                        },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
 
                     OutlinedTextField(
                         value = nuevaDescripcion,
-                        onValueChange = { nuevaDescripcion = it },
-                        label = { Text("Descripción") },
+                        onValueChange = {
+                            nuevaDescripcion = it
+                        },
+                        label = {
+                            Text("Descripción")
+                        },
                         modifier = Modifier.fillMaxWidth(),
                         minLines = 3
                     )
@@ -265,17 +355,38 @@ fun MisSolicitudesScreen(
                             nuevoTipo.isNotBlank() &&
                             nuevaDescripcion.trim().length >= 10
                         ) {
-                            solicitudesViewModel.actualizarSolicitud(
-                                solicitud = solicitud,
-                                nuevoTipo = nuevoTipo,
-                                nuevaDescripcion = nuevaDescripcion,
-                                correoUsuario = correoUsuario
-                            )
+                            if (esBorrador) {
+
+                                // Guardar cambios sin enviar a revisión.
+                                solicitudesViewModel.actualizarBorrador(
+                                    solicitud = solicitud,
+                                    nuevoTipo = nuevoTipo,
+                                    nuevaDescripcion = nuevaDescripcion,
+                                    correoUsuario = correoUsuario
+                                )
+
+                            } else {
+
+                                // Corregir y reenviar al Revisor.
+                                solicitudesViewModel.actualizarSolicitud(
+                                    solicitud = solicitud,
+                                    nuevoTipo = nuevoTipo,
+                                    nuevaDescripcion = nuevaDescripcion,
+                                    correoUsuario = correoUsuario
+                                )
+                            }
+
                             solicitudEnEdicion = null
                         }
                     }
                 ) {
-                    Text("Reenviar solicitud")
+                    Text(
+                        if (esBorrador) {
+                            "Guardar cambios"
+                        } else {
+                            "Reenviar solicitud"
+                        }
+                    )
                 }
             },
             dismissButton = {
@@ -290,6 +401,7 @@ fun MisSolicitudesScreen(
         )
     }
 
+    // DIÁLOGO PARA CONSULTAR HISTORIAL.
     solicitudHistorial?.let { solicitud ->
         AlertDialog(
             onDismissRequest = {
@@ -299,7 +411,12 @@ fun MisSolicitudesScreen(
                 Text("Historial de solicitud #${solicitud.id}")
             },
             text = {
-                if (historialSolicitud.isEmpty()) {
+                if (cargandoHistorial) {
+                    Text(
+                        text = "Cargando historial...",
+                        color = MediumBrown
+                    )
+                } else if (historialSolicitud.isEmpty()) {
                     Text(
                         text = "No hay movimientos registrados para esta solicitud.",
                         color = MediumBrown
@@ -329,14 +446,62 @@ fun MisSolicitudesScreen(
             }
         )
     }
+
+    // DIÁLOGO PARA CONFIRMAR ELIMINACIÓN.
+    solicitudParaEliminar?.let { solicitud ->
+        AlertDialog(
+            onDismissRequest = {
+                solicitudParaEliminar = null
+            },
+            title = {
+                Text("Eliminar borrador")
+            },
+            text = {
+                Text(
+                    text = "¿Estás seguro de que deseas eliminar este borrador? " +
+                            "Esta acción no se puede deshacer."
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        solicitudesViewModel.eliminarSolicitud(
+                            solicitud = solicitud,
+                            correoUsuario = correoUsuario
+                        )
+
+                        solicitudParaEliminar = null
+                    }
+                ) {
+                    Text(
+                        text = "Eliminar",
+                        color = DustyPink
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        solicitudParaEliminar = null
+                    }
+                ) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
 }
 
+// COMPONENTE PARA MOSTRAR EL HISTORIAL.
 @Composable
 private fun HistorialRevisionItem(
     revision: RevisionSolicitudEntity
 ) {
     val formatoFecha = remember {
-        SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+        SimpleDateFormat(
+            "dd/MM/yyyy HH:mm",
+            Locale.getDefault()
+        )
     }
 
     Column(

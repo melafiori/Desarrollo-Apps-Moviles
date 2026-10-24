@@ -7,13 +7,14 @@ import androidx.lifecycle.viewModelScope
 import cl.duoc.gestiondocumentalcmq.model.DatabaseProvider
 import cl.duoc.gestiondocumentalcmq.model.DocumentoEntity
 import cl.duoc.gestiondocumentalcmq.model.DocumentoRepository
+import cl.duoc.gestiondocumentalcmq.model.SesionUsuario
 import cl.duoc.gestiondocumentalcmq.model.UsuarioEntity
 import cl.duoc.gestiondocumentalcmq.model.UsuarioRepository
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.Job
 
 class DocumentosViewModel(
     application: Application
@@ -25,7 +26,6 @@ class DocumentosViewModel(
     private val repository =
         DocumentoRepository(database.documentoDao())
 
-    // Repositorio para consultar funcionarios registrados.
     private val usuarioRepository =
         UsuarioRepository(database.usuarioDao())
 
@@ -33,8 +33,6 @@ class DocumentosViewModel(
     private var versionEstado = 0L
 
     private val trabajosConsulta = mutableListOf<Job>()
-
-    // Operaciones de escritura iniciadas durante la sesión.
     private val trabajosEscritura = mutableListOf<Job>()
 
     private fun ejecutarConsulta(
@@ -71,50 +69,148 @@ class DocumentosViewModel(
         trabajosEscritura.add(trabajo)
     }
 
+    // Comprueba la identidad compartida y su vigencia en Room.
+    private suspend fun usuarioAutorizado(
+        rolRequerido: String,
+        versionActual: Long
+    ): UsuarioEntity? {
+
+        if (versionActual != versionEstado) {
+            return null
+        }
+
+        val sesion = SesionUsuario.obtenerUsuarioActual()
+            ?: return null
+
+        if (sesion.rol != rolRequerido) {
+            return null
+        }
+
+        val usuario =
+            usuarioRepository.obtenerUsuarioPorCorreo(
+                sesion.correo
+            ) ?: return null
+
+        if (versionActual != versionEstado) {
+            return null
+        }
+
+        val sesionVigente =
+            SesionUsuario.obtenerUsuarioActual()
+
+        if (
+            sesionVigente != sesion ||
+            !usuario.activo ||
+            usuario.rol != rolRequerido
+        ) {
+            return null
+        }
+
+        return usuario
+    }
+
+    private fun mostrarSinPermiso(
+        versionActual: Long
+    ) {
+        if (versionActual == versionEstado) {
+            _mensaje.value =
+                "No tienes permisos para realizar esta operación."
+        }
+    }
+
     // Funcionarios activos disponibles para Recursos Humanos.
     private val _funcionariosActivos =
         MutableStateFlow<List<UsuarioEntity>>(emptyList())
 
-    val funcionariosActivos = _funcionariosActivos.asStateFlow()
+    val funcionariosActivos =
+        _funcionariosActivos.asStateFlow()
 
-    // Documentos del funcionario
+    // Documentos del funcionario.
     private val _misDocumentos =
         MutableStateFlow<List<DocumentoEntity>>(emptyList())
+
     val misDocumentos = _misDocumentos.asStateFlow()
 
-    // Documentos pendientes para el Revisor
+    // Documentos pendientes para el Revisor.
     private val _documentosPendientes =
         MutableStateFlow<List<DocumentoEntity>>(emptyList())
-    val documentosPendientes = _documentosPendientes.asStateFlow()
 
-    // Todos los documentos para expedientes laborales de RRHH
+    val documentosPendientes =
+        _documentosPendientes.asStateFlow()
+
+    // Todos los documentos para expedientes laborales de RRHH.
     private val _todosLosDocumentos =
         MutableStateFlow<List<DocumentoEntity>>(emptyList())
-    val todosLosDocumentos = _todosLosDocumentos.asStateFlow()
+
+    val todosLosDocumentos =
+        _todosLosDocumentos.asStateFlow()
 
     private val _mensaje = MutableStateFlow("")
     val mensaje = _mensaje.asStateFlow()
 
+    // NUEVO: indica si se está guardando un documento personal.
+    private val _guardandoDocumento =
+        MutableStateFlow(false)
+
+    val guardandoDocumento =
+        _guardandoDocumento.asStateFlow()
+
+    // NUEVO: identificador del último documento personal guardado.
+    // Solo cambia cuando Room confirma la inserción.
+    private val _ultimoDocumentoRegistrado =
+        MutableStateFlow<Long?>(null)
+
+    val ultimoDocumentoRegistrado =
+        _ultimoDocumentoRegistrado.asStateFlow()
+
     // Estado del registro de documentos laborales de RRHH.
-    private val _guardandoDocumentoLaboral = MutableStateFlow(false)
+    private val _guardandoDocumentoLaboral =
+        MutableStateFlow(false)
+
     val guardandoDocumentoLaboral =
         _guardandoDocumentoLaboral.asStateFlow()
 
-    // Identificador del último documento laboral guardado correctamente.
     private val _ultimoDocumentoLaboralRegistrado =
         MutableStateFlow<Long?>(null)
 
     val ultimoDocumentoLaboralRegistrado =
         _ultimoDocumentoLaboralRegistrado.asStateFlow()
 
-    // Cargar documentos del funcionario.
+    // Cargar documentos del funcionario autenticado.
     fun cargarMisDocumentos(correo: String) {
         ejecutarConsulta { versionActual ->
             try {
-                val documentos =
-                    repository.obtenerDocumentosPorFuncionario(correo)
+                val funcionario =
+                    usuarioAutorizado(
+                        "Funcionario",
+                        versionActual
+                    )
 
-                if (versionActual == versionEstado) {
+                if (funcionario == null) {
+                    _misDocumentos.value = emptyList()
+                    mostrarSinPermiso(versionActual)
+                    return@ejecutarConsulta
+                }
+
+                val correoSolicitado =
+                    correo.trim().lowercase()
+
+                if (correoSolicitado != funcionario.correo) {
+                    _misDocumentos.value = emptyList()
+                    mostrarSinPermiso(versionActual)
+                    return@ejecutarConsulta
+                }
+
+                val documentos =
+                    repository.obtenerDocumentosPorFuncionario(
+                        funcionario.correo
+                    )
+
+                if (
+                    versionActual == versionEstado &&
+                    SesionUsuario.obtenerUsuarioActual()?.correo ==
+                    funcionario.correo
+                ) {
                     _misDocumentos.value = documentos
                 }
 
@@ -133,10 +229,26 @@ class DocumentosViewModel(
     fun cargarDocumentosPendientes() {
         ejecutarConsulta { versionActual ->
             try {
+                val revisor =
+                    usuarioAutorizado(
+                        "Revisor",
+                        versionActual
+                    )
+
+                if (revisor == null) {
+                    _documentosPendientes.value = emptyList()
+                    mostrarSinPermiso(versionActual)
+                    return@ejecutarConsulta
+                }
+
                 val documentos =
                     repository.obtenerDocumentosPendientes()
 
-                if (versionActual == versionEstado) {
+                if (
+                    versionActual == versionEstado &&
+                    SesionUsuario.obtenerUsuarioActual()?.correo ==
+                    revisor.correo
+                ) {
                     _documentosPendientes.value = documentos
                 }
 
@@ -155,10 +267,26 @@ class DocumentosViewModel(
     fun cargarTodosLosDocumentos() {
         ejecutarConsulta { versionActual ->
             try {
+                val rrhh =
+                    usuarioAutorizado(
+                        "Recursos Humanos",
+                        versionActual
+                    )
+
+                if (rrhh == null) {
+                    _todosLosDocumentos.value = emptyList()
+                    mostrarSinPermiso(versionActual)
+                    return@ejecutarConsulta
+                }
+
                 val documentos =
                     repository.obtenerTodosLosDocumentos()
 
-                if (versionActual == versionEstado) {
+                if (
+                    versionActual == versionEstado &&
+                    SesionUsuario.obtenerUsuarioActual()?.correo ==
+                    rrhh.correo
+                ) {
                     _todosLosDocumentos.value = documentos
                 }
 
@@ -173,14 +301,18 @@ class DocumentosViewModel(
         }
     }
 
-
-    // Guardar documento nuevo.
+    // Guardar documento nuevo del funcionario autenticado.
     fun guardarDocumento(
         nombre: String,
         tipo: String,
         uriArchivo: String,
         correoFuncionario: String
     ) {
+        // NUEVO: impedir solicitudes simultáneas de registro.
+        if (_guardandoDocumento.value) {
+            return
+        }
+
         if (
             nombre.isBlank() ||
             tipo.isBlank() ||
@@ -191,10 +323,35 @@ class DocumentosViewModel(
             return
         }
 
+        // NUEVO: activar el estado antes de iniciar la corrutina.
+        _guardandoDocumento.value = true
+        _ultimoDocumentoRegistrado.value = null
+        _mensaje.value = ""
+
         ejecutarEscritura { versionActual ->
             try {
-                // Evitar continuar si la sesión ya cambió.
-                if (versionActual != versionEstado) {
+                val funcionario =
+                    usuarioAutorizado(
+                        "Funcionario",
+                        versionActual
+                    )
+
+                if (
+                    funcionario == null ||
+                    correoFuncionario.trim().lowercase() !=
+                    funcionario.correo
+                ) {
+                    mostrarSinPermiso(versionActual)
+                    return@ejecutarEscritura
+                }
+
+                if (
+                    usuarioAutorizado(
+                        "Funcionario",
+                        versionActual
+                    ) == null
+                ) {
+                    mostrarSinPermiso(versionActual)
                     return@ejecutarEscritura
                 }
 
@@ -202,22 +359,32 @@ class DocumentosViewModel(
                     nombre = nombre.trim(),
                     tipo = tipo.trim(),
                     uriArchivo = uriArchivo,
-                    correoFuncionario = correoFuncionario,
+                    correoFuncionario = funcionario.correo,
                     estado = "Pendiente de revisión"
                 )
 
-                repository.insertarDocumento(documento)
+                // NUEVO: obtener el ID confirmado por Room.
+                val documentoId =
+                    repository.insertarDocumento(documento)
 
-                // No actualizar la interfaz de una sesión anterior.
                 if (versionActual != versionEstado) {
                     return@ejecutarEscritura
                 }
 
-                _mensaje.value = "Documento guardado correctamente."
+                if (documentoId <= 0L) {
+                    _mensaje.value =
+                        "No se pudo registrar el documento."
+                    return@ejecutarEscritura
+                }
 
-                cargarMisDocumentos(correoFuncionario)
-                cargarDocumentosPendientes()
-                cargarTodosLosDocumentos()
+                _mensaje.value =
+                    "Documento guardado correctamente."
+
+                // NUEVO: informar que el guardado finalizó.
+                _ultimoDocumentoRegistrado.value =
+                    documentoId
+
+                cargarMisDocumentos(funcionario.correo)
 
             } catch (e: CancellationException) {
                 throw e
@@ -225,6 +392,10 @@ class DocumentosViewModel(
                 if (versionActual == versionEstado) {
                     _mensaje.value =
                         "Error al guardar documento: ${e.message}"
+                }
+            } finally {
+                if (versionActual == versionEstado) {
+                    _guardandoDocumento.value = false
                 }
             }
         }
@@ -236,12 +407,6 @@ class DocumentosViewModel(
         nuevoEstado: String,
         comentario: String
     ) {
-        if (documento.estado != "Pendiente de revisión") {
-            _mensaje.value =
-                "Solo se pueden revisar documentos pendientes."
-            return
-        }
-
         if (
             nuevoEstado !in listOf(
                 "Validado",
@@ -264,21 +429,42 @@ class DocumentosViewModel(
 
         ejecutarEscritura { versionActual ->
             try {
-                // Verificar que la operación pertenezca
-                // a la sesión actual.
+                val revisor =
+                    usuarioAutorizado(
+                        "Revisor",
+                        versionActual
+                    )
+
+                if (revisor == null) {
+                    mostrarSinPermiso(versionActual)
+                    return@ejecutarEscritura
+                }
+
+                if (
+                    usuarioAutorizado(
+                        "Revisor",
+                        versionActual
+                    ) == null
+                ) {
+                    mostrarSinPermiso(versionActual)
+                    return@ejecutarEscritura
+                }
+
+                val filasActualizadas =
+                    repository.revisarDocumentoSeguro(
+                        documentoId = documento.id,
+                        nuevoEstado = nuevoEstado,
+                        comentario = comentario
+                    )
+
                 if (versionActual != versionEstado) {
                     return@ejecutarEscritura
                 }
 
-                val actualizado = documento.copy(
-                    estado = nuevoEstado,
-                    comentarioRevision = comentario.trim()
-                )
-
-                repository.actualizarDocumento(actualizado)
-
-                // Evitar actualizar información de una sesión anterior.
-                if (versionActual != versionEstado) {
+                if (filasActualizadas == 0) {
+                    _mensaje.value =
+                        "El documento ya fue revisado o no está disponible."
+                    cargarDocumentosPendientes()
                     return@ejecutarEscritura
                 }
 
@@ -286,8 +472,6 @@ class DocumentosViewModel(
                     "Documento actualizado a: $nuevoEstado"
 
                 cargarDocumentosPendientes()
-                cargarMisDocumentos(documento.correoFuncionario)
-                cargarTodosLosDocumentos()
 
             } catch (e: CancellationException) {
                 throw e
@@ -306,15 +490,6 @@ class DocumentosViewModel(
         nuevaUri: String,
         correoFuncionario: String
     ) {
-        if (
-            documento.correoFuncionario != correoFuncionario ||
-            documento.estado != "Observado"
-        ) {
-            _mensaje.value =
-                "No tienes permiso para reenviar este documento."
-            return
-        }
-
         if (nuevaUri.isBlank()) {
             _mensaje.value = "Selecciona un archivo."
             return
@@ -322,30 +497,53 @@ class DocumentosViewModel(
 
         ejecutarEscritura { versionActual ->
             try {
-                // Comprobar que la sesión no haya cambiado.
+                val funcionario =
+                    usuarioAutorizado(
+                        "Funcionario",
+                        versionActual
+                    )
+
+                if (
+                    funcionario == null ||
+                    correoFuncionario.trim().lowercase() !=
+                    funcionario.correo
+                ) {
+                    mostrarSinPermiso(versionActual)
+                    return@ejecutarEscritura
+                }
+
+                if (
+                    usuarioAutorizado(
+                        "Funcionario",
+                        versionActual
+                    ) == null
+                ) {
+                    mostrarSinPermiso(versionActual)
+                    return@ejecutarEscritura
+                }
+
+                val filasActualizadas =
+                    repository.reenviarDocumentoSeguro(
+                        documentoId = documento.id,
+                        nuevaUri = nuevaUri,
+                        correoFuncionario = funcionario.correo
+                    )
+
                 if (versionActual != versionEstado) {
                     return@ejecutarEscritura
                 }
 
-                val documentoActualizado = documento.copy(
-                    uriArchivo = nuevaUri,
-                    estado = "Pendiente de revisión",
-                    comentarioRevision = ""
-                )
-
-                repository.actualizarDocumento(documentoActualizado)
-
-                // No publicar resultados de una sesión anterior.
-                if (versionActual != versionEstado) {
+                if (filasActualizadas == 0) {
+                    _mensaje.value =
+                        "El documento ya no está observado o no te pertenece."
+                    cargarMisDocumentos(funcionario.correo)
                     return@ejecutarEscritura
                 }
 
                 _mensaje.value =
                     "Documento reenviado para revisión."
 
-                cargarMisDocumentos(correoFuncionario)
-                cargarDocumentosPendientes()
-                cargarTodosLosDocumentos()
+                cargarMisDocumentos(funcionario.correo)
 
             } catch (e: CancellationException) {
                 throw e
@@ -359,14 +557,12 @@ class DocumentosViewModel(
     }
 
     // Registrar documento laboral desde Recursos Humanos.
-    // Verifica al funcionario y confirma el guardado en Room.
     fun registrarDocumentoLaboral(
         nombre: String,
         tipo: String,
         uriArchivo: String,
         correoFuncionario: String
     ) {
-        // Evitar registros simultáneos.
         if (_guardandoDocumentoLaboral.value) {
             return
         }
@@ -377,7 +573,8 @@ class DocumentosViewModel(
             uriArchivo.isBlank() ||
             correoFuncionario.isBlank()
         ) {
-            _mensaje.value = "Completa todos los datos del documento."
+            _mensaje.value =
+                "Completa todos los datos del documento."
             return
         }
 
@@ -400,8 +597,14 @@ class DocumentosViewModel(
 
         ejecutarEscritura { versionActual ->
             try {
-                // Comprobar que la sesión siga vigente.
-                if (versionActual != versionEstado) {
+                val rrhh =
+                    usuarioAutorizado(
+                        "Recursos Humanos",
+                        versionActual
+                    )
+
+                if (rrhh == null) {
+                    mostrarSinPermiso(versionActual)
                     return@ejecutarEscritura
                 }
 
@@ -413,8 +616,6 @@ class DocumentosViewModel(
                         correoNormalizado
                     )
 
-                // La consulta puede tardar.
-                // Volver a comprobar la sesión.
                 if (versionActual != versionEstado) {
                     return@ejecutarEscritura
                 }
@@ -429,6 +630,16 @@ class DocumentosViewModel(
                     return@ejecutarEscritura
                 }
 
+                if (
+                    usuarioAutorizado(
+                        "Recursos Humanos",
+                        versionActual
+                    ) == null
+                ) {
+                    mostrarSinPermiso(versionActual)
+                    return@ejecutarEscritura
+                }
+
                 val documento = DocumentoEntity(
                     nombre = nombre.trim(),
                     tipo = tipo,
@@ -438,11 +649,9 @@ class DocumentosViewModel(
                     comentarioRevision = ""
                 )
 
-                // Room devuelve el ID del documento insertado.
                 val documentoId =
                     repository.insertarDocumento(documento)
 
-                // No actualizar la interfaz si cambió la sesión.
                 if (versionActual != versionEstado) {
                     return@ejecutarEscritura
                 }
@@ -456,23 +665,19 @@ class DocumentosViewModel(
                 _mensaje.value =
                     "Documento laboral registrado y validado correctamente."
 
-                // Señal de éxito para limpiar el formulario.
-                _ultimoDocumentoLaboralRegistrado.value = documentoId
+                _ultimoDocumentoLaboralRegistrado.value =
+                    documentoId
 
                 cargarTodosLosDocumentos()
-                cargarMisDocumentos(correoNormalizado)
 
             } catch (e: CancellationException) {
                 throw e
-
             } catch (e: Exception) {
                 if (versionActual == versionEstado) {
                     _mensaje.value =
                         "Error al registrar documento laboral: ${e.message}"
                 }
-
             } finally {
-                // No modificar el estado de una sesión nueva.
                 if (versionActual == versionEstado) {
                     _guardandoDocumentoLaboral.value = false
                 }
@@ -480,14 +685,30 @@ class DocumentosViewModel(
         }
     }
 
-    // Cargar funcionarios activos para Recursos Humanos.
+    // Cargar funcionarios activos para RRHH.
     fun cargarFuncionariosActivos() {
         ejecutarConsulta { versionActual ->
             try {
+                val rrhh =
+                    usuarioAutorizado(
+                        "Recursos Humanos",
+                        versionActual
+                    )
+
+                if (rrhh == null) {
+                    _funcionariosActivos.value = emptyList()
+                    mostrarSinPermiso(versionActual)
+                    return@ejecutarConsulta
+                }
+
                 val funcionarios =
                     usuarioRepository.obtenerFuncionariosActivos()
 
-                if (versionActual == versionEstado) {
+                if (
+                    versionActual == versionEstado &&
+                    SesionUsuario.obtenerUsuarioActual()?.correo ==
+                    rrhh.correo
+                ) {
                     _funcionariosActivos.value = funcionarios
                 }
 
@@ -525,6 +746,10 @@ class DocumentosViewModel(
         _funcionariosActivos.value = emptyList()
 
         _mensaje.value = ""
+
+        // NUEVO: limpiar estados del registro personal.
+        _guardandoDocumento.value = false
+        _ultimoDocumentoRegistrado.value = null
 
         _guardandoDocumentoLaboral.value = false
         _ultimoDocumentoLaboralRegistrado.value = null

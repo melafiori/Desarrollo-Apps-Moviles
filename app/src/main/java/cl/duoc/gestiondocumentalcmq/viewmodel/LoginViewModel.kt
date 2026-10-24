@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import cl.duoc.gestiondocumentalcmq.model.DatabaseProvider
 import cl.duoc.gestiondocumentalcmq.model.PasswordUtils
 import cl.duoc.gestiondocumentalcmq.model.RegistroAuditoriaRepository
+import cl.duoc.gestiondocumentalcmq.model.SesionUsuario
 import cl.duoc.gestiondocumentalcmq.model.UsuarioRepository
 import cl.duoc.gestiondocumentalcmq.model.UsuariosIniciales
 import kotlinx.coroutines.CancellationException
@@ -73,6 +74,10 @@ class LoginViewModel(
 
         val correoIngresado = _correo.value.trim().lowercase()
         val contrasennaIngresada = _contrasenna.value
+
+        // No conservar una identidad anterior
+        // mientras se intenta iniciar una nueva sesión.
+        SesionUsuario.cerrarSesion()
 
         _loginExitoso.value = false
         _rol.value = ""
@@ -155,6 +160,13 @@ class LoginViewModel(
                         "La cuenta cambió durante el inicio de sesión. Intente nuevamente."
                     return@launch
                 }
+
+                // Registrar la identidad autenticada
+                // antes de habilitar las pantallas privadas.
+                SesionUsuario.iniciarSesion(
+                    correo = correoIngresado,
+                    rol = usuarioActual.rol
+                )
 
                 _correo.value = correoIngresado
                 _rol.value = usuarioActual.rol
@@ -266,6 +278,10 @@ class LoginViewModel(
         if (cancelarVerificacion) {
             trabajoVerificacion?.cancel()
         }
+
+        // Limpiar también la identidad compartida.
+        // No elimina usuarios ni documentos de Room.
+        SesionUsuario.cerrarSesion()
 
         _correo.value = ""
         _contrasenna.value = ""

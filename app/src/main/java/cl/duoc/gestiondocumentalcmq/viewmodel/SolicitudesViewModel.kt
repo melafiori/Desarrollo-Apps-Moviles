@@ -268,6 +268,90 @@ class SolicitudesViewModel(context: Context) : ViewModel() {
         }
     }
 
+    // GUARDAR SOLICITUD COMO BORRADOR
+    fun guardarBorrador(correoUsuario: String) {
+        val tipo = _tipoSolicitud.value.trim()
+        val descripcionTexto = _descripcion.value.trim()
+        val correo = correoUsuario.trim()
+
+        // Validar que exista un funcionario identificado.
+        if (correo.isBlank()) {
+            _mensaje.value = "No se pudo identificar al usuario"
+            return
+        }
+
+        // Validar el tipo de solicitud.
+        if (tipo.isBlank()) {
+            _mensaje.value = "Debe seleccionar un tipo de solicitud"
+            return
+        }
+
+        // Reutilizar las validaciones del formulario.
+        if (!descripcionValida(descripcionTexto)) {
+            return
+        }
+
+        ejecutarOperacionSesion { versionActual ->
+            try {
+                if (versionActual != versionEstado) {
+                    return@ejecutarOperacionSesion
+                }
+
+                // Guardar el borrador, su historial y la auditoría
+                // dentro de una misma transacción.
+                database.withTransaction {
+                    val id = repository.insertarSolicitud(
+                        SolicitudEntity(
+                            tipo = tipo,
+                            descripcion = descripcionTexto,
+                            estado = "Borrador",
+                            correoUsuario = correo
+                        )
+                    ).toInt()
+
+                    registrarRevision(
+                        solicitudId = id,
+                        estadoAnterior = "Sin estado",
+                        estadoNuevo = "Borrador",
+                        comentario = "Solicitud guardada como borrador",
+                        usuarioResponsable = correo
+                    )
+
+                    auditoriaRepository.registrar(
+                        accion = "Borrador de solicitud creado: $tipo",
+                        usuario = correo
+                    )
+                }
+
+                // Evitar actualizar la interfaz de otra sesión.
+                if (versionActual != versionEstado) {
+                    return@ejecutarOperacionSesion
+                }
+
+                // Actualizar las solicitudes almacenadas.
+                recargarSolicitudes(correo, versionActual)
+
+                if (versionActual != versionEstado) {
+                    return@ejecutarOperacionSesion
+                }
+
+                // Limpiar el formulario después de guardar.
+                _tipoSolicitud.value = ""
+                _descripcion.value = ""
+                _solicitudCreada.value = null
+                _mensaje.value = "Borrador guardado correctamente"
+
+            } catch (e: CancellationException) {
+                throw e
+
+            } catch (e: Exception) {
+                if (versionActual == versionEstado) {
+                    _mensaje.value = "No se pudo guardar el borrador"
+                }
+            }
+        }
+    }
+
     // CONSULTAR SOLICITUDES DEL FUNCIONARIO
     fun cargarSolicitudes(correoUsuario: String) {
         val correo = correoUsuario.trim()
@@ -503,6 +587,124 @@ class SolicitudesViewModel(context: Context) : ViewModel() {
                 if (versionActual == versionEstado) {
                     _mensaje.value =
                         "No se pudo reenviar la solicitud"
+                }
+            }
+        }
+    }
+
+    // EDITAR SOLICITUD GUARDADA COMO BORRADOR
+    fun actualizarBorrador(
+        solicitud: SolicitudEntity,
+        nuevoTipo: String,
+        nuevaDescripcion: String,
+        correoUsuario: String
+    ) {
+        val correo = correoUsuario.trim()
+        val tipo = nuevoTipo.trim()
+        val descripcionTexto = nuevaDescripcion.trim()
+
+        // Verificar que el borrador pertenezca al funcionario.
+        if (
+            correo.isBlank() ||
+            !solicitud.correoUsuario.equals(
+                correo,
+                ignoreCase = true
+            )
+        ) {
+            _mensaje.value =
+                "No tienes permiso para editar este borrador"
+            return
+        }
+
+        // Solo se permite editar solicitudes en estado Borrador.
+        if (
+            !solicitud.estado.equals(
+                "Borrador",
+                ignoreCase = true
+            )
+        ) {
+            _mensaje.value =
+                "Solo puedes editar solicitudes en borrador"
+            return
+        }
+
+        // Validar los campos.
+        if (tipo.isBlank()) {
+            _mensaje.value =
+                "Debe seleccionar un tipo de solicitud"
+            return
+        }
+
+        if (!descripcionValida(descripcionTexto)) {
+            return
+        }
+
+        ejecutarOperacionSesion { versionActual ->
+            try {
+                if (versionActual != versionEstado) {
+                    return@ejecutarOperacionSesion
+                }
+
+                // Actualizar el borrador y registrar la modificación.
+                database.withTransaction {
+
+                    repository.actualizarSolicitud(
+                        solicitud.copy(
+                            tipo = tipo,
+                            descripcion = descripcionTexto,
+                            estado = "Borrador"
+                        )
+                    )
+
+                    registrarRevision(
+                        solicitudId = solicitud.id,
+                        estadoAnterior = "Borrador",
+                        estadoNuevo = "Borrador",
+                        comentario = "Borrador modificado",
+                        usuarioResponsable = correo
+                    )
+
+                    auditoriaRepository.registrar(
+                        accion = "Borrador actualizado: ${solicitud.id}",
+                        usuario = correo
+                    )
+                }
+
+                // Evitar mostrar datos de una sesión anterior.
+                if (versionActual != versionEstado) {
+                    return@ejecutarOperacionSesion
+                }
+
+                // Actualizar las solicitudes del funcionario.
+                recargarSolicitudes(correo, versionActual)
+
+                if (versionActual != versionEstado) {
+                    return@ejecutarOperacionSesion
+                }
+
+                // Actualizar el historial de la solicitud.
+                val historial =
+                    revisionSolicitudRepository
+                        .obtenerHistorialPorSolicitud(
+                            solicitud.id
+                        )
+
+                if (versionActual != versionEstado) {
+                    return@ejecutarOperacionSesion
+                }
+
+                _historialSolicitud.value = historial
+
+                _mensaje.value =
+                    "Borrador actualizado correctamente"
+
+            } catch (e: CancellationException) {
+                throw e
+
+            } catch (e: Exception) {
+                if (versionActual == versionEstado) {
+                    _mensaje.value =
+                        "No se pudo actualizar el borrador"
                 }
             }
         }

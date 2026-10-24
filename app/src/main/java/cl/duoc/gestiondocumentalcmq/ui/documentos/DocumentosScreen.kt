@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import cl.duoc.gestiondocumentalcmq.model.DocumentoEntity
 import cl.duoc.gestiondocumentalcmq.viewmodel.DocumentosViewModel
 import cl.duoc.gestiondocumentalcmq.ui.theme.*
 import java.io.File
@@ -35,10 +36,35 @@ fun DocumentosScreen(
     val documentos by documentosViewModel.misDocumentos.collectAsState()
     val mensaje by documentosViewModel.mensaje.collectAsState()
 
+    // NUEVO: estados del registro en Room.
+    val guardandoDocumento by
+    documentosViewModel.guardandoDocumento.collectAsState()
+
+    val ultimoDocumentoRegistrado by
+    documentosViewModel.ultimoDocumentoRegistrado.collectAsState()
+
     var nombreDocumento by remember { mutableStateOf("") }
     var tipoDocumento by remember { mutableStateOf("") }
     var uriDocumento by remember { mutableStateOf("") }
     var archivoSeleccionado by remember { mutableStateOf("") }
+
+    // Evita limpiar el formulario por un resultado anterior.
+    var esperandoConfirmacion by remember {
+        mutableStateOf(false)
+    }
+
+    // Documento observado que se desea corregir.
+    var documentoParaCorregir by remember {
+        mutableStateOf<DocumentoEntity?>(null)
+    }
+
+    var nuevaUriCorreccion by remember {
+        mutableStateOf("")
+    }
+
+    var nombreArchivoCorreccion by remember {
+        mutableStateOf("")
+    }
 
     LaunchedEffect(correoUsuario) {
         if (correoUsuario.isNotBlank()) {
@@ -46,26 +72,85 @@ fun DocumentosScreen(
         }
     }
 
-    // Copia un archivo seleccionado al almacenamiento privado.
+    // Limpiar el formulario únicamente cuando Room
+    // confirme una inserción nueva y exitosa.
+    LaunchedEffect(ultimoDocumentoRegistrado) {
+        if (
+            esperandoConfirmacion &&
+            ultimoDocumentoRegistrado != null
+        ) {
+            uriDocumento = ""
+            archivoSeleccionado = ""
+            nombreDocumento = ""
+            tipoDocumento = ""
+            esperandoConfirmacion = false
+        }
+    }
+
+    // Si termina el intento sin confirmación,
+    // conservar los datos para que puedan corregirse.
+    LaunchedEffect(guardandoDocumento, ultimoDocumentoRegistrado) {
+        if (
+            esperandoConfirmacion &&
+            !guardandoDocumento &&
+            ultimoDocumentoRegistrado == null
+        ) {
+            esperandoConfirmacion = false
+        }
+    }
+
+    // Copiar un archivo al almacenamiento privado.
     fun guardarArchivoLocal(uri: Uri): String {
         val archivo = File(
             context.filesDir,
             "documento_${UUID.randomUUID()}"
         )
 
-        context.contentResolver.openInputStream(uri).use { entrada ->
-            requireNotNull(entrada) {
-                "No se pudo leer el archivo."
+        try {
+            context.contentResolver.openInputStream(uri).use { entrada ->
+                requireNotNull(entrada) {
+                    "No se pudo leer el archivo."
+                }
+
+                archivo.outputStream().use { salida ->
+                    entrada.copyTo(salida)
+                }
             }
-            archivo.outputStream().use { salida ->
-                entrada.copyTo(salida)
+
+            return Uri.fromFile(archivo).toString()
+
+        } catch (e: Exception) {
+            archivo.delete()
+            throw e
+        }
+    }
+
+    // Obtener el nombre visible del archivo.
+    fun obtenerNombreArchivo(uri: Uri): String {
+        var nombre = "Documento seleccionado"
+
+        context.contentResolver.query(
+            uri,
+            null,
+            null,
+            null,
+            null
+        )?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                val indice = cursor.getColumnIndex(
+                    OpenableColumns.DISPLAY_NAME
+                )
+
+                if (indice >= 0) {
+                    nombre = cursor.getString(indice) ?: nombre
+                }
             }
         }
 
-        return Uri.fromFile(archivo).toString()
+        return nombre
     }
 
-    // Cámara: captura una vista previa y la guarda como JPEG.
+    // Capturar una fotografía y guardarla como JPEG.
     val tomarFoto = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicturePreview()
     ) { imagen ->
@@ -125,29 +210,13 @@ fun DocumentosScreen(
         }
     }
 
+    // Seleccionar un documento nuevo.
     val selectorArchivo = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
         if (uri != null) {
             try {
-                var nombre = "Documento seleccionado"
-
-                context.contentResolver.query(
-                    uri,
-                    null,
-                    null,
-                    null,
-                    null
-                )?.use { cursor ->
-                    if (cursor.moveToFirst()) {
-                        val indice = cursor.getColumnIndex(
-                            OpenableColumns.DISPLAY_NAME
-                        )
-                        if (indice >= 0) {
-                            nombre = cursor.getString(indice)
-                        }
-                    }
-                }
+                val nombre = obtenerNombreArchivo(uri)
 
                 uriDocumento = guardarArchivoLocal(uri)
                 archivoSeleccionado = nombre
@@ -160,6 +229,30 @@ fun DocumentosScreen(
                 Toast.makeText(
                     context,
                     "Error al seleccionar archivo: ${e.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+
+    // Seleccionar un archivo corregido.
+    val selectorCorreccion = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (
+            uri != null &&
+            documentoParaCorregir != null
+        ) {
+            try {
+                val nombre = obtenerNombreArchivo(uri)
+
+                nuevaUriCorreccion = guardarArchivoLocal(uri)
+                nombreArchivoCorreccion = nombre
+
+            } catch (e: Exception) {
+                Toast.makeText(
+                    context,
+                    "Error al seleccionar corrección: ${e.message}",
                     Toast.LENGTH_LONG
                 ).show()
             }
@@ -194,6 +287,7 @@ fun DocumentosScreen(
                 onClick = {
                     selectorArchivo.launch("*/*")
                 },
+                enabled = !guardandoDocumento,
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(18.dp),
                 colors = ButtonDefaults.buttonColors(
@@ -220,6 +314,7 @@ fun DocumentosScreen(
                         )
                     }
                 },
+                enabled = !guardandoDocumento,
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(18.dp),
                 colors = ButtonDefaults.buttonColors(
@@ -256,16 +351,26 @@ fun DocumentosScreen(
 
                     OutlinedTextField(
                         value = nombreDocumento,
-                        onValueChange = { nombreDocumento = it },
-                        label = { Text("Nombre del documento") },
+                        onValueChange = {
+                            nombreDocumento = it
+                        },
+                        enabled = !guardandoDocumento,
+                        label = {
+                            Text("Nombre del documento")
+                        },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
 
                     OutlinedTextField(
                         value = tipoDocumento,
-                        onValueChange = { tipoDocumento = it },
-                        label = { Text("Tipo de documento") },
+                        onValueChange = {
+                            tipoDocumento = it
+                        },
+                        enabled = !guardandoDocumento,
+                        label = {
+                            Text("Tipo de documento")
+                        },
                         placeholder = {
                             Text("Ej.: Certificado, contrato, licencia")
                         },
@@ -286,27 +391,32 @@ fun DocumentosScreen(
                                     Toast.LENGTH_SHORT
                                 ).show()
                             } else {
+                                esperandoConfirmacion = true
+
                                 documentosViewModel.guardarDocumento(
                                     nombre = nombreDocumento,
                                     tipo = tipoDocumento,
                                     uriArchivo = uriDocumento,
                                     correoFuncionario = correoUsuario
                                 )
-
-                                // Se limpia el formulario.
-                                uriDocumento = ""
-                                archivoSeleccionado = ""
-                                nombreDocumento = ""
-                                tipoDocumento = ""
                             }
                         },
+                        enabled = !guardandoDocumento,
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = DustyPink
                         ),
                         shape = RoundedCornerShape(16.dp)
                     ) {
-                        Text("Registrar documento")
+                        if (guardandoDocumento) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp,
+                                color = White
+                            )
+                        } else {
+                            Text("Registrar documento")
+                        }
                     }
                 }
             }
@@ -371,28 +481,139 @@ fun DocumentosScreen(
                             fontSize = 13.sp
                         )
                     }
+
+                    if (documento.estado == "Observado") {
+                        Spacer(Modifier.height(4.dp))
+
+                        Button(
+                            onClick = {
+                                documentoParaCorregir = documento
+                                nuevaUriCorreccion = ""
+                                nombreArchivoCorreccion = ""
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = DustyPink,
+                                contentColor = White
+                            )
+                        ) {
+                            Text("Corregir y reenviar")
+                        }
+                    }
                 }
             }
         }
+    }
+
+    // Diálogo para corregir un documento observado.
+    documentoParaCorregir?.let { documento ->
+        AlertDialog(
+            onDismissRequest = {
+                documentoParaCorregir = null
+                nuevaUriCorreccion = ""
+                nombreArchivoCorreccion = ""
+            },
+            title = {
+                Text("Corregir documento")
+            },
+            text = {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = documento.nombre,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    if (documento.comentarioRevision.isNotBlank()) {
+                        Text(
+                            text = "Observación del Revisor: ${documento.comentarioRevision}"
+                        )
+                    }
+
+                    Text(
+                        text = "Selecciona el archivo corregido para enviarlo nuevamente a revisión."
+                    )
+
+                    OutlinedButton(
+                        onClick = {
+                            selectorCorreccion.launch("*/*")
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Seleccionar archivo corregido")
+                    }
+
+                    if (nombreArchivoCorreccion.isNotBlank()) {
+                        Text(
+                            text = "Archivo: $nombreArchivoCorreccion",
+                            color = MediumBrown
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        documentosViewModel.reenviarDocumento(
+                            documento = documento,
+                            nuevaUri = nuevaUriCorreccion,
+                            correoFuncionario = correoUsuario
+                        )
+
+                        documentoParaCorregir = null
+                        nuevaUriCorreccion = ""
+                        nombreArchivoCorreccion = ""
+                    },
+                    enabled = nuevaUriCorreccion.isNotBlank(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = DustyPink,
+                        contentColor = White
+                    )
+                ) {
+                    Text("Reenviar")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        documentoParaCorregir = null
+                        nuevaUriCorreccion = ""
+                        nombreArchivoCorreccion = ""
+                    }
+                ) {
+                    Text("Cancelar")
+                }
+            }
+        )
     }
 }
 
 @Composable
 fun EstadoDocumento(estado: String) {
     val colorFondo = when (estado) {
-        "Validado" -> androidx.compose.ui.graphics.Color(0xFFE3F1E8)
+        "Validado" ->
+            androidx.compose.ui.graphics.Color(0xFFE3F1E8)
+
         "Pendiente", "Pendiente de revisión" ->
             androidx.compose.ui.graphics.Color(0xFFF8E8D8)
+
         "Observado" -> LightPink
+
         "Rechazado" ->
             androidx.compose.ui.graphics.Color(0xFFFFE0E0)
+
         else -> LightPink
     }
 
     val colorTexto = when (estado) {
-        "Validado" -> androidx.compose.ui.graphics.Color(0xFF42634B)
+        "Validado" ->
+            androidx.compose.ui.graphics.Color(0xFF42634B)
+
         "Pendiente", "Pendiente de revisión" ->
             androidx.compose.ui.graphics.Color(0xFF8A5A35)
+
         else -> DarkBrown
     }
 
