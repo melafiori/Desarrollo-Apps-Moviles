@@ -1,5 +1,7 @@
+package cl.duoc.gestiondocumentalcmq.model.repository
 
-package cl.duoc.gestiondocumentalcmq.model
+import cl.duoc.gestiondocumentalcmq.model.local.UsuarioDao
+import cl.duoc.gestiondocumentalcmq.model.local.UsuarioEntity
 
 class UsuarioRepository(
     private val usuarioDao: UsuarioDao

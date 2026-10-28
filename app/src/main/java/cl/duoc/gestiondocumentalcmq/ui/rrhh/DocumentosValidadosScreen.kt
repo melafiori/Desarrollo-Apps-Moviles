@@ -17,7 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
-import cl.duoc.gestiondocumentalcmq.model.DocumentoEntity
+import cl.duoc.gestiondocumentalcmq.model.local.DocumentoEntity
 import cl.duoc.gestiondocumentalcmq.ui.theme.*
 import cl.duoc.gestiondocumentalcmq.viewmodel.DocumentosViewModel
 import java.io.File

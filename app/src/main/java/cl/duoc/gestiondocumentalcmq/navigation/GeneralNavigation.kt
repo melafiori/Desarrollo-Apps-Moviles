@@ -7,7 +7,7 @@ import androidx.compose.runtime.getValue
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
-import cl.duoc.gestiondocumentalcmq.model.Documento
+import cl.duoc.gestiondocumentalcmq.model.entities.Documento
 import cl.duoc.gestiondocumentalcmq.ui.documentos.DetalleDocumentoScreen
 import cl.duoc.gestiondocumentalcmq.ui.documentos.HistorialScreen
 import cl.duoc.gestiondocumentalcmq.ui.home.HomeScreen

@@ -1,8 +1,8 @@
-
-package cl.duoc.gestiondocumentalcmq.model
+package cl.duoc.gestiondocumentalcmq.model.local
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import cl.duoc.gestiondocumentalcmq.model.entities.RegistroAuditoria
 
 @Database(
     entities = [

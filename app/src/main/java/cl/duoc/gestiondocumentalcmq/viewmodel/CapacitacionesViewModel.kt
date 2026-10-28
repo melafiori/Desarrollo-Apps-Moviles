@@ -3,8 +3,8 @@ package cl.duoc.gestiondocumentalcmq.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import cl.duoc.gestiondocumentalcmq.model.CapacitacionEntity
-import cl.duoc.gestiondocumentalcmq.model.CapacitacionRepository
+import cl.duoc.gestiondocumentalcmq.model.local.CapacitacionEntity
+import cl.duoc.gestiondocumentalcmq.model.repository.CapacitacionRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow

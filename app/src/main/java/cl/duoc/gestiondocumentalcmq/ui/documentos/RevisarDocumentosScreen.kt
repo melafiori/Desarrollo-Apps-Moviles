@@ -11,7 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import cl.duoc.gestiondocumentalcmq.model.DocumentoEntity
+import cl.duoc.gestiondocumentalcmq.model.local.DocumentoEntity
 import cl.duoc.gestiondocumentalcmq.viewmodel.DocumentosViewModel
 
 @Composable

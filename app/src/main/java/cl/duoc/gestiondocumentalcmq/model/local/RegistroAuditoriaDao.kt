@@ -1,8 +1,9 @@
-package cl.duoc.gestiondocumentalcmq.model
+package cl.duoc.gestiondocumentalcmq.model.local
 
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
+import cl.duoc.gestiondocumentalcmq.model.entities.RegistroAuditoria
 
 @Dao
 interface RegistroAuditoriaDao {

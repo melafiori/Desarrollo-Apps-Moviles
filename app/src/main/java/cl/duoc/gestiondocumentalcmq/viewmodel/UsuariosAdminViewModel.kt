@@ -4,10 +4,10 @@ package cl.duoc.gestiondocumentalcmq.viewmodel
 import android.util.Patterns
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import cl.duoc.gestiondocumentalcmq.model.PasswordUtils
-import cl.duoc.gestiondocumentalcmq.model.RegistroAuditoriaRepository
-import cl.duoc.gestiondocumentalcmq.model.UsuarioEntity
-import cl.duoc.gestiondocumentalcmq.model.UsuarioRepository
+import cl.duoc.gestiondocumentalcmq.utils.PasswordUtils
+import cl.duoc.gestiondocumentalcmq.model.repository.RegistroAuditoriaRepository
+import cl.duoc.gestiondocumentalcmq.model.local.UsuarioEntity
+import cl.duoc.gestiondocumentalcmq.model.repository.UsuarioRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow

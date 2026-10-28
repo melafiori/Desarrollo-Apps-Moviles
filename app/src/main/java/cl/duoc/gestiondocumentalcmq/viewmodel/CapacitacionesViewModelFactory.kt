@@ -4,8 +4,8 @@ package cl.duoc.gestiondocumentalcmq.viewmodel
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import cl.duoc.gestiondocumentalcmq.model.CapacitacionRepository
-import cl.duoc.gestiondocumentalcmq.model.DatabaseProvider
+import cl.duoc.gestiondocumentalcmq.model.repository.CapacitacionRepository
+import cl.duoc.gestiondocumentalcmq.model.local.DatabaseProvider
 
 class CapacitacionesViewModelFactory(
     private val context: Context

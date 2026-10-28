@@ -1,5 +1,7 @@
+package cl.duoc.gestiondocumentalcmq.model.repository
 
-package cl.duoc.gestiondocumentalcmq.model
+import cl.duoc.gestiondocumentalcmq.model.local.RegistroAuditoriaDao
+import cl.duoc.gestiondocumentalcmq.model.entities.RegistroAuditoria
 
 class RegistroAuditoriaRepository(
     private val dao: RegistroAuditoriaDao

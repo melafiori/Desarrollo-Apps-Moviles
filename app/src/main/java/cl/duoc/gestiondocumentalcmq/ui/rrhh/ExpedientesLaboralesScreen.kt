@@ -28,7 +28,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import cl.duoc.gestiondocumentalcmq.model.DocumentoEntity
+import cl.duoc.gestiondocumentalcmq.model.local.DocumentoEntity
 import cl.duoc.gestiondocumentalcmq.ui.theme.DarkBrown
 import cl.duoc.gestiondocumentalcmq.ui.theme.DustyPink
 import cl.duoc.gestiondocumentalcmq.ui.theme.LightPink

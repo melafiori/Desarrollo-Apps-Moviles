@@ -28,7 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import cl.duoc.gestiondocumentalcmq.model.SolicitudEntity
+import cl.duoc.gestiondocumentalcmq.model.local.SolicitudEntity
 import cl.duoc.gestiondocumentalcmq.viewmodel.SolicitudesViewModel
 import java.text.DateFormat
 import java.util.Date

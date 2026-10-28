@@ -23,9 +23,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import cl.duoc.gestiondocumentalcmq.model.DatabaseProvider
-import cl.duoc.gestiondocumentalcmq.model.RegistroAuditoria
-import cl.duoc.gestiondocumentalcmq.model.RegistroAuditoriaRepository
+import cl.duoc.gestiondocumentalcmq.model.local.DatabaseProvider
+import cl.duoc.gestiondocumentalcmq.model.entities.RegistroAuditoria
+import cl.duoc.gestiondocumentalcmq.model.repository.RegistroAuditoriaRepository
 import cl.duoc.gestiondocumentalcmq.ui.theme.DarkBrown
 import cl.duoc.gestiondocumentalcmq.ui.theme.DustyPink
 import cl.duoc.gestiondocumentalcmq.ui.theme.LightPink

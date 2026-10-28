@@ -1,5 +1,7 @@
+package cl.duoc.gestiondocumentalcmq.model.repository
 
-package cl.duoc.gestiondocumentalcmq.model
+import cl.duoc.gestiondocumentalcmq.model.local.RevisionSolicitudDao
+import cl.duoc.gestiondocumentalcmq.model.local.RevisionSolicitudEntity
 
 class RevisionSolicitudRepository(
     private val dao: RevisionSolicitudDao

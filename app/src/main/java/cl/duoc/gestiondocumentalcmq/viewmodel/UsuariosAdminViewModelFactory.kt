@@ -4,9 +4,9 @@ package cl.duoc.gestiondocumentalcmq.viewmodel
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import cl.duoc.gestiondocumentalcmq.model.DatabaseProvider
-import cl.duoc.gestiondocumentalcmq.model.RegistroAuditoriaRepository
-import cl.duoc.gestiondocumentalcmq.model.UsuarioRepository
+import cl.duoc.gestiondocumentalcmq.model.local.DatabaseProvider
+import cl.duoc.gestiondocumentalcmq.model.repository.RegistroAuditoriaRepository
+import cl.duoc.gestiondocumentalcmq.model.repository.UsuarioRepository
 
 class UsuariosAdminViewModelFactory(
     private val context: Context

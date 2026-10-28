@@ -1,5 +1,7 @@
+package cl.duoc.gestiondocumentalcmq.model.repository
 
-package cl.duoc.gestiondocumentalcmq.model
+import cl.duoc.gestiondocumentalcmq.model.local.CapacitacionDao
+import cl.duoc.gestiondocumentalcmq.model.local.CapacitacionEntity
 
 class CapacitacionRepository(
     private val capacitacionDao: CapacitacionDao

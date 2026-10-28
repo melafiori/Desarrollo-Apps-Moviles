@@ -13,7 +13,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import cl.duoc.gestiondocumentalcmq.model.Documento
+import cl.duoc.gestiondocumentalcmq.model.entities.Documento
 
 @Composable
 fun DetalleDocumentoScreen(

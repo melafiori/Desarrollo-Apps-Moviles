@@ -1,17 +1,16 @@
 package cl.duoc.gestiondocumentalcmq.viewmodel
 
 import android.content.Context
-import android.util.Log.e
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.room.withTransaction
-import cl.duoc.gestiondocumentalcmq.model.DatabaseProvider
-import cl.duoc.gestiondocumentalcmq.model.RegistroAuditoriaRepository
-import cl.duoc.gestiondocumentalcmq.model.RevisionSolicitudEntity
-import cl.duoc.gestiondocumentalcmq.model.RevisionSolicitudRepository
-import cl.duoc.gestiondocumentalcmq.model.Solicitud
-import cl.duoc.gestiondocumentalcmq.model.SolicitudEntity
-import cl.duoc.gestiondocumentalcmq.model.SolicitudRepository
+import cl.duoc.gestiondocumentalcmq.model.local.DatabaseProvider
+import cl.duoc.gestiondocumentalcmq.model.repository.RegistroAuditoriaRepository
+import cl.duoc.gestiondocumentalcmq.model.local.RevisionSolicitudEntity
+import cl.duoc.gestiondocumentalcmq.model.repository.RevisionSolicitudRepository
+import cl.duoc.gestiondocumentalcmq.model.entities.Solicitud
+import cl.duoc.gestiondocumentalcmq.model.local.SolicitudEntity
+import cl.duoc.gestiondocumentalcmq.model.repository.SolicitudRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch

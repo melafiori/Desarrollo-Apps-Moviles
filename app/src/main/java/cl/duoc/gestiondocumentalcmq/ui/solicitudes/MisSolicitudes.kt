@@ -34,8 +34,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import cl.duoc.gestiondocumentalcmq.model.RevisionSolicitudEntity
-import cl.duoc.gestiondocumentalcmq.model.SolicitudEntity
+import cl.duoc.gestiondocumentalcmq.model.local.RevisionSolicitudEntity
+import cl.duoc.gestiondocumentalcmq.model.local.SolicitudEntity
 import cl.duoc.gestiondocumentalcmq.ui.theme.DarkBrown
 import cl.duoc.gestiondocumentalcmq.ui.theme.DustyPink
 import cl.duoc.gestiondocumentalcmq.ui.theme.LightPink

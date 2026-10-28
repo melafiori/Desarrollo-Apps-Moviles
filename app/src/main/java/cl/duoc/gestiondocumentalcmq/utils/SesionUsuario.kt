@@ -1,5 +1,4 @@
-
-package cl.duoc.gestiondocumentalcmq.model
+package cl.duoc.gestiondocumentalcmq.utils
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow

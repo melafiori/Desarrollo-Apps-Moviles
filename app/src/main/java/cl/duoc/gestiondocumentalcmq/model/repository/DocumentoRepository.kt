@@ -1,5 +1,7 @@
+package cl.duoc.gestiondocumentalcmq.model.repository
 
-package cl.duoc.gestiondocumentalcmq.model
+import cl.duoc.gestiondocumentalcmq.model.local.DocumentoDao
+import cl.duoc.gestiondocumentalcmq.model.local.DocumentoEntity
 
 class DocumentoRepository(
     private val dao: DocumentoDao

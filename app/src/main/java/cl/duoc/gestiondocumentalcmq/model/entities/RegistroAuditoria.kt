@@ -1,5 +1,4 @@
-
-package cl.duoc.gestiondocumentalcmq.model
+package cl.duoc.gestiondocumentalcmq.model.entities
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey

@@ -1,5 +1,4 @@
-
-package cl.duoc.gestiondocumentalcmq.model
+package cl.duoc.gestiondocumentalcmq.utils
 
 import android.util.Base64
 import java.security.MessageDigest

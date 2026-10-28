@@ -1,4 +1,4 @@
-package cl.duoc.gestiondocumentalcmq.model
+package cl.duoc.gestiondocumentalcmq.model.entities
 
 data class Documento(
     val nombre: String,

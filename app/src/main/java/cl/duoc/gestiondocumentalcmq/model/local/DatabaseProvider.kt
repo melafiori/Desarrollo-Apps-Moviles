@@ -1,5 +1,4 @@
-
-package cl.duoc.gestiondocumentalcmq.model
+package cl.duoc.gestiondocumentalcmq.model.local
 
 import android.content.Context
 import androidx.room.Room
