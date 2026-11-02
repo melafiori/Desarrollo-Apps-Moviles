@@ -1,4 +1,3 @@
-
 package cl.duoc.gestiondocumentalcmq.navigation
 
 import android.app.Application
@@ -26,17 +25,21 @@ import cl.duoc.gestiondocumentalcmq.viewmodel.SolicitudesViewModelFactory
 import cl.duoc.gestiondocumentalcmq.viewmodel.UsuariosAdminViewModel
 import cl.duoc.gestiondocumentalcmq.viewmodel.UsuariosAdminViewModelFactory
 
+// Navegación principal de la app: crea los ViewModels y reúne todas las rutas
 @Composable
 fun AppNavigation() {
 
+    // Controlador que permite moverse entre pantallas
     val navController = rememberNavController()
 
+    // Contexto de la app (necesario para algunos ViewModels)
     val context = LocalContext.current
 
     // VIEWMODEL DE DOCUMENTOS
     val documentosViewModel: DocumentosViewModel = viewModel()
 
     // VIEWMODEL DE AUTENTICACIÓN
+    // Se crea con la Application porque la necesita para funcionar
     val loginViewModel: LoginViewModel = viewModel(
         factory = ViewModelProvider.AndroidViewModelFactory.getInstance(
             context.applicationContext as Application
@@ -44,6 +47,7 @@ fun AppNavigation() {
     )
 
     // VIEWMODEL DE SOLICITUDES
+    // remember evita recrear la factory en cada recomposición
     val solicitudesFactory = remember(context) {
         SolicitudesViewModelFactory(context)
     }
@@ -71,19 +75,23 @@ fun AppNavigation() {
     )
 
     // ESTADO GLOBAL DE AUTENTICACIÓN
+    // true si hay una sesión iniciada
     val loginExitoso by loginViewModel.loginExitoso.collectAsState()
 
     // RUTA ACTUAL
+    // Pantalla en la que está el usuario ahora
     val backStackEntry by navController.currentBackStackEntryAsState()
     val rutaActual = backStackEntry?.destination?.route
 
     // CONTROL DE SESIÓN AL VOLVER A LA APLICACIÓN
     val lifecycleOwner = LocalLifecycleOwner.current
 
+    // Observa el ciclo de vida de la app y se limpia al salir
     DisposableEffect(lifecycleOwner, loginViewModel) {
 
         val observer = LifecycleEventObserver { _, event ->
 
+            // Se ejecuta cada vez que la app vuelve a primer plano
             if (event == Lifecycle.Event.ON_RESUME) {
 
                 // Verifica que la cuenta siga activa
@@ -92,8 +100,10 @@ fun AppNavigation() {
             }
         }
 
+        // Empieza a observar
         lifecycleOwner.lifecycle.addObserver(observer)
 
+        // Deja de observar al salir (evita fugas de memoria)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
         }
@@ -131,15 +141,18 @@ fun AppNavigation() {
 
             navController.navigate("login") {
 
+                // Borra el historial de pantallas
                 popUpTo(navController.graph.id) {
                     inclusive = true
                 }
 
+                // Evita abrir "login" repetido
                 launchSingleTop = true
             }
         }
     }
 
+    // Contenedor de todas las pantallas; parte en "login"
     NavHost(
         navController = navController,
         startDestination = "login"

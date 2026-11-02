@@ -1,4 +1,3 @@
-
 package cl.duoc.gestiondocumentalcmq.navigation
 
 import androidx.compose.runtime.LaunchedEffect
@@ -17,6 +16,7 @@ import cl.duoc.gestiondocumentalcmq.viewmodel.CapacitacionesViewModel
 import cl.duoc.gestiondocumentalcmq.viewmodel.LoginViewModel
 import cl.duoc.gestiondocumentalcmq.viewmodel.UsuariosAdminViewModel
 
+// Define las rutas generales, disponibles para cualquier rol con sesión iniciada
 fun NavGraphBuilder.generalNavigation(
     navController: NavHostController,
     loginViewModel: LoginViewModel,
@@ -27,15 +27,18 @@ fun NavGraphBuilder.generalNavigation(
     // PANTALLA PRINCIPAL
     composable("home") {
 
+        // Datos de la sesión actual (se actualizan solos)
         val rol by loginViewModel.rol.collectAsState()
         val correo by loginViewModel.correo.collectAsState()
         val loginExitoso by loginViewModel.loginExitoso.collectAsState()
 
+        // Solo entra si hay sesión iniciada y datos válidos
         if (loginExitoso && rol.isNotBlank() && correo.isNotBlank()) {
 
             HomeScreen(
                 rol = rol,
 
+                // Botón Documentos: la ruta depende del rol
                 onDocumentosClick = {
                     when (rol) {
                         "Funcionario" -> {
@@ -52,6 +55,7 @@ fun NavGraphBuilder.generalNavigation(
                     }
                 },
 
+                // Botón Solicitudes: la ruta depende del rol
                 onSolicitudesClick = {
                     when (rol) {
                         "Funcionario" -> {
@@ -68,6 +72,7 @@ fun NavGraphBuilder.generalNavigation(
                     }
                 },
 
+                // Botón Capacitaciones: solo Funcionario y RRHH
                 onCapacitacionesClick = {
                     when (rol) {
                         "Funcionario" -> {
@@ -80,24 +85,29 @@ fun NavGraphBuilder.generalNavigation(
                     }
                 },
 
+                // Botón Perfil
                 onPerfilClick = {
                     navController.navigate("perfil")
                 },
 
+                // Botón Historial
                 onHistorialClick = {
                     navController.navigate("historial")
                 },
 
+                // Botón Notificaciones
                 onNotificacionesClick = {
                     navController.navigate("notificaciones")
                 },
 
+                // Botón Auditoría: solo Administrador
                 onAuditoriaClick = {
                     if (rol == "Administrador") {
                         navController.navigate("auditoria")
                     }
                 },
 
+                // Botón Gestión de usuarios: solo Administrador
                 onGestionUsuariosClick = {
                     if (rol == "Administrador") {
                         navController.navigate("gestionUsuarios")
@@ -106,11 +116,14 @@ fun NavGraphBuilder.generalNavigation(
             )
 
         } else {
+            // Sin sesión válida: vuelve a "login"
             LaunchedEffect(loginExitoso, rol, correo) {
                 navController.navigate("login") {
+                    // Limpia el historial de pantallas
                     popUpTo(navController.graph.id) {
                         inclusive = true
                     }
+                    // Evita abrir "login" repetido
                     launchSingleTop = true
                 }
             }
@@ -118,17 +131,22 @@ fun NavGraphBuilder.generalNavigation(
     }
 
     // DETALLE DE DOCUMENTO (DATOS SIMULADOS)
+    // La ruta recibe el nombre del documento como parámetro
     composable("detalleDocumento/{nombre}") { backStackEntry ->
 
+        // Datos de la sesión actual
         val rol by loginViewModel.rol.collectAsState()
         val correo by loginViewModel.correo.collectAsState()
         val loginExitoso by loginViewModel.loginExitoso.collectAsState()
 
+        // Solo entra si hay sesión iniciada y datos válidos
         if (loginExitoso && rol.isNotBlank() && correo.isNotBlank()) {
 
+            // Obtiene el nombre del documento desde la ruta
             val nombre = backStackEntry.arguments
                 ?.getString("nombre")
 
+            // Lista de documentos de ejemplo (simulados)
             val documentos = listOf(
                 Documento(
                     nombre = "Contrato de trabajo",
@@ -149,10 +167,12 @@ fun NavGraphBuilder.generalNavigation(
                 )
             )
 
+            // Busca el documento que coincide con el nombre
             val documento = documentos.find {
                 it.nombre == nombre
             }
 
+            // Si lo encuentra, muestra su detalle
             if (documento != null) {
                 DetalleDocumentoScreen(
                     documento = documento,
@@ -161,6 +181,7 @@ fun NavGraphBuilder.generalNavigation(
             }
 
         } else {
+            // Sin sesión válida: vuelve a "login"
             LaunchedEffect(loginExitoso, rol, correo) {
                 navController.navigate("login") {
                     popUpTo(navController.graph.id) {
@@ -175,16 +196,19 @@ fun NavGraphBuilder.generalNavigation(
     // MI PERFIL Y CERRAR SESIÓN
     composable("perfil") {
 
+        // Datos de la sesión actual
         val rol by loginViewModel.rol.collectAsState()
         val correo by loginViewModel.correo.collectAsState()
         val loginExitoso by loginViewModel.loginExitoso.collectAsState()
 
+        // Solo entra si hay sesión iniciada y datos válidos
         if (loginExitoso && rol.isNotBlank() && correo.isNotBlank()) {
 
             PerfilScreen(
                 rol = rol,
                 correo = correo,
 
+                // Botón Cerrar sesión
                 onCerrarSesion = {
 
                     // Limpiar antecedentes temporales del funcionario.
@@ -208,6 +232,7 @@ fun NavGraphBuilder.generalNavigation(
             )
 
         } else {
+            // Sin sesión válida: vuelve a "login"
             LaunchedEffect(loginExitoso, rol, correo) {
                 navController.navigate("login") {
                     popUpTo(navController.graph.id) {
@@ -222,15 +247,18 @@ fun NavGraphBuilder.generalNavigation(
     // HISTORIAL
     composable("historial") {
 
+        // Datos de la sesión actual
         val rol by loginViewModel.rol.collectAsState()
         val correo by loginViewModel.correo.collectAsState()
         val loginExitoso by loginViewModel.loginExitoso.collectAsState()
 
+        // Solo entra si hay sesión iniciada y datos válidos
         if (loginExitoso && rol.isNotBlank() && correo.isNotBlank()) {
 
             HistorialScreen()
 
         } else {
+            // Sin sesión válida: vuelve a "login"
             LaunchedEffect(loginExitoso, rol, correo) {
                 navController.navigate("login") {
                     popUpTo(navController.graph.id) {
@@ -245,15 +273,18 @@ fun NavGraphBuilder.generalNavigation(
     // NOTIFICACIONES
     composable("notificaciones") {
 
+        // Datos de la sesión actual
         val rol by loginViewModel.rol.collectAsState()
         val correo by loginViewModel.correo.collectAsState()
         val loginExitoso by loginViewModel.loginExitoso.collectAsState()
 
+        // Solo entra si hay sesión iniciada y datos válidos
         if (loginExitoso && rol.isNotBlank() && correo.isNotBlank()) {
 
             NotificacionesScreen()
 
         } else {
+            // Sin sesión válida: vuelve a "login"
             LaunchedEffect(loginExitoso, rol, correo) {
                 navController.navigate("login") {
                     popUpTo(navController.graph.id) {

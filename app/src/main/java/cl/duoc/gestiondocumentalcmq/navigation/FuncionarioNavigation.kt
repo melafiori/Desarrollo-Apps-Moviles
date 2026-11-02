@@ -1,4 +1,3 @@
-
 package cl.duoc.gestiondocumentalcmq.navigation
 
 import androidx.compose.runtime.LaunchedEffect
@@ -16,6 +15,7 @@ import cl.duoc.gestiondocumentalcmq.viewmodel.DocumentosViewModel
 import cl.duoc.gestiondocumentalcmq.viewmodel.LoginViewModel
 import cl.duoc.gestiondocumentalcmq.viewmodel.SolicitudesViewModel
 
+// Define las rutas de navegación exclusivas del funcionario
 fun NavGraphBuilder.funcionarioNavigation(
     navController: NavHostController,
     documentosViewModel: DocumentosViewModel,
@@ -27,10 +27,12 @@ fun NavGraphBuilder.funcionarioNavigation(
     // DOCUMENTOS DEL FUNCIONARIO
     composable("documentos") {
 
+        // Datos de la sesión actual (se actualizan solos)
         val correo by loginViewModel.correo.collectAsState()
         val rol by loginViewModel.rol.collectAsState()
         val loginExitoso by loginViewModel.loginExitoso.collectAsState()
 
+        // Solo entra si inició sesión y es Funcionario
         if (loginExitoso && rol == "Funcionario" && correo.isNotBlank()) {
 
             DocumentosScreen(
@@ -39,13 +41,16 @@ fun NavGraphBuilder.funcionarioNavigation(
             )
 
         } else {
+            // Sin permiso: va a "home" si hay sesión, o a "login" si no
             LaunchedEffect(loginExitoso, rol, correo) {
                 navController.navigate(
                     if (loginExitoso) "home" else "login"
                 ) {
+                    // Limpia el historial de pantallas
                     popUpTo(navController.graph.id) {
                         inclusive = true
                     }
+                    // Evita abrir la misma pantalla repetida
                     launchSingleTop = true
                 }
             }
@@ -55,13 +60,16 @@ fun NavGraphBuilder.funcionarioNavigation(
     // CREAR SOLICITUDES - FUNCIONARIO
     composable("solicitudes") {
 
+        // Datos de la sesión actual
         val correo by loginViewModel.correo.collectAsState()
         val rol by loginViewModel.rol.collectAsState()
         val loginExitoso by loginViewModel.loginExitoso.collectAsState()
 
+        // Solo entra si inició sesión y es Funcionario
         if (loginExitoso && rol == "Funcionario" && correo.isNotBlank()) {
 
             SolicitudesScreen(
+                // Botón para ir a ver sus solicitudes
                 onMisSolicitudesClick = {
                     navController.navigate("misSolicitudes")
                 },
@@ -70,6 +78,7 @@ fun NavGraphBuilder.funcionarioNavigation(
             )
 
         } else {
+            // Sin permiso: redirige a "home" o "login"
             LaunchedEffect(loginExitoso, rol, correo) {
                 navController.navigate(
                     if (loginExitoso) "home" else "login"
@@ -86,10 +95,12 @@ fun NavGraphBuilder.funcionarioNavigation(
     // MIS SOLICITUDES - FUNCIONARIO
     composable("misSolicitudes") {
 
+        // Datos de la sesión actual
         val correo by loginViewModel.correo.collectAsState()
         val rol by loginViewModel.rol.collectAsState()
         val loginExitoso by loginViewModel.loginExitoso.collectAsState()
 
+        // Solo entra si inició sesión y es Funcionario
         if (loginExitoso && rol == "Funcionario" && correo.isNotBlank()) {
 
             MisSolicitudesScreen(
@@ -98,6 +109,7 @@ fun NavGraphBuilder.funcionarioNavigation(
             )
 
         } else {
+            // Sin permiso: redirige a "home" o "login"
             LaunchedEffect(loginExitoso, rol, correo) {
                 navController.navigate(
                     if (loginExitoso) "home" else "login"
@@ -114,10 +126,12 @@ fun NavGraphBuilder.funcionarioNavigation(
     // CAPACITACIONES DEL FUNCIONARIO
     composable("capacitaciones") {
 
+        // Datos de la sesión actual
         val correo by loginViewModel.correo.collectAsState()
         val rol by loginViewModel.rol.collectAsState()
         val loginExitoso by loginViewModel.loginExitoso.collectAsState()
 
+        // Solo entra si inició sesión y es Funcionario
         if (loginExitoso && rol == "Funcionario" && correo.isNotBlank()) {
 
             CapacitacionesScreen(
@@ -126,6 +140,7 @@ fun NavGraphBuilder.funcionarioNavigation(
             )
 
         } else {
+            // Sin permiso: redirige a "home" o "login"
             LaunchedEffect(loginExitoso, rol, correo) {
                 navController.navigate(
                     if (loginExitoso) "home" else "login"
