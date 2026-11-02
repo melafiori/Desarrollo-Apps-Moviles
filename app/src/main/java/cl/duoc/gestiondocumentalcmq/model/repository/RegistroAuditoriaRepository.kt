@@ -7,6 +7,7 @@ class RegistroAuditoriaRepository(
     private val dao: RegistroAuditoriaDao
 ) {
 
+    // Crea y guarda un nuevo registro de auditoría en la base de datos
     suspend fun registrar(
         accion: String,
         usuario: String
@@ -19,6 +20,7 @@ class RegistroAuditoriaRepository(
         )
     }
 
+    // Obtiene y devuelve la lista completa de todos los registros guardados
     suspend fun obtenerRegistros(): List<RegistroAuditoria> {
         return dao.obtenerTodos()
     }
