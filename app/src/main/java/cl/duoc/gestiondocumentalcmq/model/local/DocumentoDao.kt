@@ -5,16 +5,20 @@ import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
 
+// DAO: interfaz con las operaciones de la tabla "documentos" (Room)
+// Todas son "suspend": se ejecutan en segundo plano sin bloquear la pantalla
 @Dao
 interface DocumentoDao {
 
     // Guardar un documento nuevo.
+    // Devuelve el id generado para el nuevo registro
     @Insert
     suspend fun insertarDocumento(
         documento: DocumentoEntity
     ): Long
 
     // Obtener los documentos de un funcionario.
+    // Ordenados del más reciente al más antiguo
     @Query("""
         SELECT * FROM documentos
         WHERE correoFuncionario = :correo
@@ -33,6 +37,7 @@ interface DocumentoDao {
     suspend fun obtenerTodosLosDocumentos(): List<DocumentoEntity>
 
     // Obtener documentos pendientes de revisión.
+    // Ordenados del más antiguo al más reciente (primero los que llevan más espera)
     @Query("""
         SELECT * FROM documentos
         WHERE estado = 'Pendiente de revisión'
@@ -41,6 +46,7 @@ interface DocumentoDao {
     suspend fun obtenerDocumentosPendientes(): List<DocumentoEntity>
 
     // Buscar un documento por su identificador.
+    // Devuelve null si no existe
     @Query("""
         SELECT * FROM documentos
         WHERE id = :documentoId
@@ -71,12 +77,15 @@ interface DocumentoDao {
         SET estado = :nuevoEstado,
             comentarioRevision = :comentario
         WHERE id = :documentoId
+        -- Solo si sigue pendiente de revisión
         AND estado = 'Pendiente de revisión'
+        -- Solo acepta estos tres estados
         AND :nuevoEstado IN (
             'Validado',
             'Observado',
             'Rechazado'
         )
+        -- Si no es "Validado", el comentario es obligatorio
         AND (
             :nuevoEstado = 'Validado'
             OR LENGTH(TRIM(:comentario)) > 0
@@ -102,8 +111,11 @@ interface DocumentoDao {
             estado = 'Pendiente de revisión',
             comentarioRevision = ''
         WHERE id = :documentoId
+        -- Solo si el documento es de este funcionario
         AND correoFuncionario = :correoFuncionario
+        -- Solo si estaba observado
         AND estado = 'Observado'
+        -- La nueva URI no puede venir vacía
         AND LENGTH(TRIM(:nuevaUri)) > 0
     """)
     suspend fun reenviarDocumentoSeguro(
