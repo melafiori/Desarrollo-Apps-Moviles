@@ -1,4 +1,3 @@
-
 package cl.duoc.gestiondocumentalcmq.viewmodel
 
 import android.app.Application
@@ -16,341 +15,194 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+// ViewModel: Conecta la interfaz gráfica (pantallas) con la base de datos de documentos
 class DocumentosViewModel(
     application: Application
 ) : AndroidViewModel(application) {
 
-    private val database =
-        DatabaseProvider.obtenerDatabase(application)
+    // Inicialización de la base de datos y repositorios
+    private val database = DatabaseProvider.obtenerDatabase(application)
+    private val repository = DocumentoRepository(database.documentoDao())
+    private val usuarioRepository = UsuarioRepository(database.usuarioDao())
 
-    private val repository =
-        DocumentoRepository(database.documentoDao())
-
-    private val usuarioRepository =
-        UsuarioRepository(database.usuarioDao())
-
-    // Control de operaciones y datos temporales por sesión.
+    // Variables para controlar que no se mezclen datos si el usuario cambia rápido de sesión
     private var versionEstado = 0L
-
     private val trabajosConsulta = mutableListOf<Job>()
     private val trabajosEscritura = mutableListOf<Job>()
 
-    private fun ejecutarConsulta(
-        operacion: suspend (Long) -> Unit
-    ) {
+    // Ejecuta tareas de lectura en segundo plano de forma segura
+    private fun ejecutarConsulta(operacion: suspend (Long) -> Unit) {
         val versionActual = versionEstado
-
         val trabajo = viewModelScope.launch {
-            try {
-                operacion(versionActual)
-            } catch (e: CancellationException) {
-                throw e
-            }
+            try { operacion(versionActual) }
+            catch (e: CancellationException) { throw e }
         }
-
         trabajosConsulta.removeAll { !it.isActive }
         trabajosConsulta.add(trabajo)
     }
 
-    private fun ejecutarEscritura(
-        operacion: suspend (Long) -> Unit
-    ) {
+    // Ejecuta tareas de guardado/modificación en segundo plano de forma segura
+    private fun ejecutarEscritura(operacion: suspend (Long) -> Unit) {
         val versionActual = versionEstado
-
         val trabajo = viewModelScope.launch {
-            try {
-                operacion(versionActual)
-            } catch (e: CancellationException) {
-                throw e
-            }
+            try { operacion(versionActual) }
+            catch (e: CancellationException) { throw e }
         }
-
         trabajosEscritura.removeAll { !it.isActive }
         trabajosEscritura.add(trabajo)
     }
 
-    // Comprueba la identidad compartida y su vigencia en Room.
+    // Verifica si el usuario actual tiene la sesión iniciada y el rol correcto (permisos)
     private suspend fun usuarioAutorizado(
         rolRequerido: String,
         versionActual: Long
     ): UsuarioEntity? {
+        if (versionActual != versionEstado) return null
 
-        if (versionActual != versionEstado) {
+        val sesion = SesionUsuario.obtenerUsuarioActual() ?: return null
+        if (sesion.rol != rolRequerido) return null
+
+        val usuario = usuarioRepository.obtenerUsuarioPorCorreo(sesion.correo) ?: return null
+        if (versionActual != versionEstado) return null
+
+        val sesionVigente = SesionUsuario.obtenerUsuarioActual()
+        if (sesionVigente != sesion || !usuario.activo || usuario.rol != rolRequerido) {
             return null
         }
-
-        val sesion = SesionUsuario.obtenerUsuarioActual()
-            ?: return null
-
-        if (sesion.rol != rolRequerido) {
-            return null
-        }
-
-        val usuario =
-            usuarioRepository.obtenerUsuarioPorCorreo(
-                sesion.correo
-            ) ?: return null
-
-        if (versionActual != versionEstado) {
-            return null
-        }
-
-        val sesionVigente =
-            SesionUsuario.obtenerUsuarioActual()
-
-        if (
-            sesionVigente != sesion ||
-            !usuario.activo ||
-            usuario.rol != rolRequerido
-        ) {
-            return null
-        }
-
         return usuario
     }
 
-    private fun mostrarSinPermiso(
-        versionActual: Long
-    ) {
+    // Muestra un mensaje de error si el usuario intenta hacer algo sin permiso
+    private fun mostrarSinPermiso(versionActual: Long) {
         if (versionActual == versionEstado) {
-            _mensaje.value =
-                "No tienes permisos para realizar esta operación."
+            _mensaje.value = "No tienes permisos para realizar esta operación."
         }
     }
 
-    // Funcionarios activos disponibles para Recursos Humanos.
-    private val _funcionariosActivos =
-        MutableStateFlow<List<UsuarioEntity>>(emptyList())
+    // --- ESTADOS DE LA PANTALLA (StateFlows) ---
+    // Estas variables notifican a la pantalla cuando hay cambios en los datos
 
-    val funcionariosActivos =
-        _funcionariosActivos.asStateFlow()
+    // Lista de funcionarios (para Recursos Humanos)
+    private val _funcionariosActivos = MutableStateFlow<List<UsuarioEntity>>(emptyList())
+    val funcionariosActivos = _funcionariosActivos.asStateFlow()
 
-    // Documentos del funcionario.
-    private val _misDocumentos =
-        MutableStateFlow<List<DocumentoEntity>>(emptyList())
-
+    // Lista de documentos del usuario actual
+    private val _misDocumentos = MutableStateFlow<List<DocumentoEntity>>(emptyList())
     val misDocumentos = _misDocumentos.asStateFlow()
 
-    // Documentos pendientes para el Revisor.
-    private val _documentosPendientes =
-        MutableStateFlow<List<DocumentoEntity>>(emptyList())
+    // Lista de documentos que necesitan revisión (para el Revisor)
+    private val _documentosPendientes = MutableStateFlow<List<DocumentoEntity>>(emptyList())
+    val documentosPendientes = _documentosPendientes.asStateFlow()
 
-    val documentosPendientes =
-        _documentosPendientes.asStateFlow()
+    // Lista de todos los documentos (para Recursos Humanos)
+    private val _todosLosDocumentos = MutableStateFlow<List<DocumentoEntity>>(emptyList())
+    val todosLosDocumentos = _todosLosDocumentos.asStateFlow()
 
-    // Todos los documentos para expedientes laborales de RRHH.
-    private val _todosLosDocumentos =
-        MutableStateFlow<List<DocumentoEntity>>(emptyList())
-
-    val todosLosDocumentos =
-        _todosLosDocumentos.asStateFlow()
-
+    // Mensajes para mostrar al usuario (éxito o error)
     private val _mensaje = MutableStateFlow("")
     val mensaje = _mensaje.asStateFlow()
 
-    // NUEVO: indica si se está guardando un documento personal.
-    private val _guardandoDocumento =
-        MutableStateFlow(false)
+    // Indicador de si el sistema está guardando un documento en este momento
+    private val _guardandoDocumento = MutableStateFlow(false)
+    val guardandoDocumento = _guardandoDocumento.asStateFlow()
 
-    val guardandoDocumento =
-        _guardandoDocumento.asStateFlow()
+    // Guarda la ID del último documento creado por un funcionario
+    private val _ultimoDocumentoRegistrado = MutableStateFlow<Long?>(null)
+    val ultimoDocumentoRegistrado = _ultimoDocumentoRegistrado.asStateFlow()
 
-    // NUEVO: identificador del último documento personal guardado.
-    // Solo cambia cuando Room confirma la inserción.
-    private val _ultimoDocumentoRegistrado =
-        MutableStateFlow<Long?>(null)
+    // Indicador de guardado específico para Recursos Humanos
+    private val _guardandoDocumentoLaboral = MutableStateFlow(false)
+    val guardandoDocumentoLaboral = _guardandoDocumentoLaboral.asStateFlow()
 
-    val ultimoDocumentoRegistrado =
-        _ultimoDocumentoRegistrado.asStateFlow()
+    // Guarda la ID del último documento creado por Recursos Humanos
+    private val _ultimoDocumentoLaboralRegistrado = MutableStateFlow<Long?>(null)
+    val ultimoDocumentoLaboralRegistrado = _ultimoDocumentoLaboralRegistrado.asStateFlow()
 
-    // Estado del registro de documentos laborales de RRHH.
-    private val _guardandoDocumentoLaboral =
-        MutableStateFlow(false)
 
-    val guardandoDocumentoLaboral =
-        _guardandoDocumentoLaboral.asStateFlow()
+    // --- FUNCIONES PRINCIPALES ---
 
-    private val _ultimoDocumentoLaboralRegistrado =
-        MutableStateFlow<Long?>(null)
-
-    val ultimoDocumentoLaboralRegistrado =
-        _ultimoDocumentoLaboralRegistrado.asStateFlow()
-
-    // Cargar documentos del funcionario autenticado.
+    // Busca y carga los documentos del funcionario que inició sesión
     fun cargarMisDocumentos(correo: String) {
         ejecutarConsulta { versionActual ->
             try {
-                val funcionario =
-                    usuarioAutorizado(
-                        "Funcionario",
-                        versionActual
-                    )
-
-                if (funcionario == null) {
+                val funcionario = usuarioAutorizado("Funcionario", versionActual)
+                if (funcionario == null || correo.trim().lowercase() != funcionario.correo) {
                     _misDocumentos.value = emptyList()
                     mostrarSinPermiso(versionActual)
                     return@ejecutarConsulta
                 }
 
-                val correoSolicitado =
-                    correo.trim().lowercase()
+                val documentos = repository.obtenerDocumentosPorFuncionario(funcionario.correo)
+                if (versionActual == versionEstado) _misDocumentos.value = documentos
 
-                if (correoSolicitado != funcionario.correo) {
-                    _misDocumentos.value = emptyList()
-                    mostrarSinPermiso(versionActual)
-                    return@ejecutarConsulta
-                }
-
-                val documentos =
-                    repository.obtenerDocumentosPorFuncionario(
-                        funcionario.correo
-                    )
-
-                if (
-                    versionActual == versionEstado &&
-                    SesionUsuario.obtenerUsuarioActual()?.correo ==
-                    funcionario.correo
-                ) {
-                    _misDocumentos.value = documentos
-                }
-
-            } catch (e: CancellationException) {
-                throw e
+            } catch (e: CancellationException) { throw e
             } catch (e: Exception) {
-                if (versionActual == versionEstado) {
-                    _mensaje.value =
-                        "Error al cargar documentos: ${e.message}"
-                }
+                if (versionActual == versionEstado) _mensaje.value = "Error al cargar documentos: ${e.message}"
             }
         }
     }
 
-    // Cargar documentos pendientes para el Revisor.
+    // Busca y carga los documentos que el Revisor tiene que aprobar o rechazar
     fun cargarDocumentosPendientes() {
         ejecutarConsulta { versionActual ->
             try {
-                val revisor =
-                    usuarioAutorizado(
-                        "Revisor",
-                        versionActual
-                    )
-
+                val revisor = usuarioAutorizado("Revisor", versionActual)
                 if (revisor == null) {
                     _documentosPendientes.value = emptyList()
                     mostrarSinPermiso(versionActual)
                     return@ejecutarConsulta
                 }
 
-                val documentos =
-                    repository.obtenerDocumentosPendientes()
+                val documentos = repository.obtenerDocumentosPendientes()
+                if (versionActual == versionEstado) _documentosPendientes.value = documentos
 
-                if (
-                    versionActual == versionEstado &&
-                    SesionUsuario.obtenerUsuarioActual()?.correo ==
-                    revisor.correo
-                ) {
-                    _documentosPendientes.value = documentos
-                }
-
-            } catch (e: CancellationException) {
-                throw e
+            } catch (e: CancellationException) { throw e
             } catch (e: Exception) {
-                if (versionActual == versionEstado) {
-                    _mensaje.value =
-                        "Error al cargar documentos pendientes: ${e.message}"
-                }
+                if (versionActual == versionEstado) _mensaje.value = "Error al cargar documentos pendientes: ${e.message}"
             }
         }
     }
 
-    // Cargar todos los documentos para RRHH.
+    // Busca y carga el historial completo de documentos (Solo para Recursos Humanos)
     fun cargarTodosLosDocumentos() {
         ejecutarConsulta { versionActual ->
             try {
-                val rrhh =
-                    usuarioAutorizado(
-                        "Recursos Humanos",
-                        versionActual
-                    )
-
+                val rrhh = usuarioAutorizado("Recursos Humanos", versionActual)
                 if (rrhh == null) {
                     _todosLosDocumentos.value = emptyList()
                     mostrarSinPermiso(versionActual)
                     return@ejecutarConsulta
                 }
 
-                val documentos =
-                    repository.obtenerTodosLosDocumentos()
+                val documentos = repository.obtenerTodosLosDocumentos()
+                if (versionActual == versionEstado) _todosLosDocumentos.value = documentos
 
-                if (
-                    versionActual == versionEstado &&
-                    SesionUsuario.obtenerUsuarioActual()?.correo ==
-                    rrhh.correo
-                ) {
-                    _todosLosDocumentos.value = documentos
-                }
-
-            } catch (e: CancellationException) {
-                throw e
+            } catch (e: CancellationException) { throw e
             } catch (e: Exception) {
-                if (versionActual == versionEstado) {
-                    _mensaje.value =
-                        "Error al cargar expedientes laborales: ${e.message}"
-                }
+                if (versionActual == versionEstado) _mensaje.value = "Error al cargar expedientes laborales: ${e.message}"
             }
         }
     }
 
-    // Guardar documento nuevo del funcionario autenticado.
+    // Permite a un Funcionario subir un documento nuevo
     fun guardarDocumento(
-        nombre: String,
-        tipo: String,
-        uriArchivo: String,
-        correoFuncionario: String
+        nombre: String, tipo: String, uriArchivo: String, correoFuncionario: String
     ) {
-        // NUEVO: impedir solicitudes simultáneas de registro.
-        if (_guardandoDocumento.value) {
-            return
-        }
+        if (_guardandoDocumento.value) return // Evita que se guarde dos veces seguidas por error
 
-        if (
-            nombre.isBlank() ||
-            tipo.isBlank() ||
-            uriArchivo.isBlank() ||
-            correoFuncionario.isBlank()
-        ) {
+        if (nombre.isBlank() || tipo.isBlank() || uriArchivo.isBlank() || correoFuncionario.isBlank()) {
             _mensaje.value = "Completa los datos del documento."
             return
         }
 
-        // NUEVO: activar el estado antes de iniciar la corrutina.
         _guardandoDocumento.value = true
         _ultimoDocumentoRegistrado.value = null
         _mensaje.value = ""
 
         ejecutarEscritura { versionActual ->
             try {
-                val funcionario =
-                    usuarioAutorizado(
-                        "Funcionario",
-                        versionActual
-                    )
-
-                if (
-                    funcionario == null ||
-                    correoFuncionario.trim().lowercase() !=
-                    funcionario.correo
-                ) {
-                    mostrarSinPermiso(versionActual)
-                    return@ejecutarEscritura
-                }
-
-                if (
-                    usuarioAutorizado(
-                        "Funcionario",
-                        versionActual
-                    ) == null
-                ) {
+                val funcionario = usuarioAutorizado("Funcionario", versionActual)
+                if (funcionario == null || correoFuncionario.trim().lowercase() != funcionario.correo) {
                     mostrarSinPermiso(versionActual)
                     return@ejecutarEscritura
                 }
@@ -363,132 +215,74 @@ class DocumentosViewModel(
                     estado = "Pendiente de revisión"
                 )
 
-                // NUEVO: obtener el ID confirmado por Room.
-                val documentoId =
-                    repository.insertarDocumento(documento)
-
-                if (versionActual != versionEstado) {
-                    return@ejecutarEscritura
-                }
+                val documentoId = repository.insertarDocumento(documento)
+                if (versionActual != versionEstado) return@ejecutarEscritura
 
                 if (documentoId <= 0L) {
-                    _mensaje.value =
-                        "No se pudo registrar el documento."
+                    _mensaje.value = "No se pudo registrar el documento."
                     return@ejecutarEscritura
                 }
 
-                _mensaje.value =
-                    "Documento guardado correctamente."
+                _mensaje.value = "Documento guardado correctamente."
+                _ultimoDocumentoRegistrado.value = documentoId
+                cargarMisDocumentos(funcionario.correo) // Actualiza la lista en pantalla
 
-                // NUEVO: informar que el guardado finalizó.
-                _ultimoDocumentoRegistrado.value =
-                    documentoId
-
-                cargarMisDocumentos(funcionario.correo)
-
-            } catch (e: CancellationException) {
-                throw e
+            } catch (e: CancellationException) { throw e
             } catch (e: Exception) {
-                if (versionActual == versionEstado) {
-                    _mensaje.value =
-                        "Error al guardar documento: ${e.message}"
-                }
+                if (versionActual == versionEstado) _mensaje.value = "Error al guardar documento: ${e.message}"
             } finally {
-                if (versionActual == versionEstado) {
-                    _guardandoDocumento.value = false
-                }
+                if (versionActual == versionEstado) _guardandoDocumento.value = false
             }
         }
     }
 
-    // Aprobar, observar o rechazar un documento.
+    // Permite al Revisor aprobar, rechazar o mandar a corregir (observar) un documento
     fun revisarDocumento(
-        documento: DocumentoEntity,
-        nuevoEstado: String,
-        comentario: String
+        documento: DocumentoEntity, nuevoEstado: String, comentario: String
     ) {
-        if (
-            nuevoEstado !in listOf(
-                "Validado",
-                "Observado",
-                "Rechazado"
-            )
-        ) {
+        if (nuevoEstado !in listOf("Validado", "Observado", "Rechazado")) {
             _mensaje.value = "Estado de revisión inválido."
             return
         }
 
-        if (
-            nuevoEstado != "Validado" &&
-            comentario.isBlank()
-        ) {
-            _mensaje.value =
-                "Debes escribir una justificación."
+        if (nuevoEstado != "Validado" && comentario.isBlank()) {
+            _mensaje.value = "Debes escribir una justificación."
             return
         }
 
         ejecutarEscritura { versionActual ->
             try {
-                val revisor =
-                    usuarioAutorizado(
-                        "Revisor",
-                        versionActual
-                    )
-
+                val revisor = usuarioAutorizado("Revisor", versionActual)
                 if (revisor == null) {
                     mostrarSinPermiso(versionActual)
                     return@ejecutarEscritura
                 }
 
-                if (
-                    usuarioAutorizado(
-                        "Revisor",
-                        versionActual
-                    ) == null
-                ) {
-                    mostrarSinPermiso(versionActual)
-                    return@ejecutarEscritura
-                }
+                val filasActualizadas = repository.revisarDocumentoSeguro(
+                    documentoId = documento.id,
+                    nuevoEstado = nuevoEstado,
+                    comentario = comentario
+                )
 
-                val filasActualizadas =
-                    repository.revisarDocumentoSeguro(
-                        documentoId = documento.id,
-                        nuevoEstado = nuevoEstado,
-                        comentario = comentario
-                    )
-
-                if (versionActual != versionEstado) {
-                    return@ejecutarEscritura
-                }
+                if (versionActual != versionEstado) return@ejecutarEscritura
 
                 if (filasActualizadas == 0) {
-                    _mensaje.value =
-                        "El documento ya fue revisado o no está disponible."
-                    cargarDocumentosPendientes()
-                    return@ejecutarEscritura
+                    _mensaje.value = "El documento ya fue revisado o no está disponible."
+                } else {
+                    _mensaje.value = "Documento actualizado a: $nuevoEstado"
                 }
+                cargarDocumentosPendientes() // Refresca la lista del revisor
 
-                _mensaje.value =
-                    "Documento actualizado a: $nuevoEstado"
-
-                cargarDocumentosPendientes()
-
-            } catch (e: CancellationException) {
-                throw e
+            } catch (e: CancellationException) { throw e
             } catch (e: Exception) {
-                if (versionActual == versionEstado) {
-                    _mensaje.value =
-                        "Error al revisar documento: ${e.message}"
-                }
+                if (versionActual == versionEstado) _mensaje.value = "Error al revisar documento: ${e.message}"
             }
         }
     }
 
-    // Reenviar un documento observado.
+    // Permite al Funcionario volver a enviar un archivo si se lo mandaron a corregir
     fun reenviarDocumento(
-        documento: DocumentoEntity,
-        nuevaUri: String,
-        correoFuncionario: String
+        documento: DocumentoEntity, nuevaUri: String, correoFuncionario: String
     ) {
         if (nuevaUri.isBlank()) {
             _mensaje.value = "Selecciona un archivo."
@@ -497,97 +291,47 @@ class DocumentosViewModel(
 
         ejecutarEscritura { versionActual ->
             try {
-                val funcionario =
-                    usuarioAutorizado(
-                        "Funcionario",
-                        versionActual
-                    )
-
-                if (
-                    funcionario == null ||
-                    correoFuncionario.trim().lowercase() !=
-                    funcionario.correo
-                ) {
+                val funcionario = usuarioAutorizado("Funcionario", versionActual)
+                if (funcionario == null || correoFuncionario.trim().lowercase() != funcionario.correo) {
                     mostrarSinPermiso(versionActual)
                     return@ejecutarEscritura
                 }
 
-                if (
-                    usuarioAutorizado(
-                        "Funcionario",
-                        versionActual
-                    ) == null
-                ) {
-                    mostrarSinPermiso(versionActual)
-                    return@ejecutarEscritura
-                }
+                val filasActualizadas = repository.reenviarDocumentoSeguro(
+                    documentoId = documento.id,
+                    nuevaUri = nuevaUri,
+                    correoFuncionario = funcionario.correo
+                )
 
-                val filasActualizadas =
-                    repository.reenviarDocumentoSeguro(
-                        documentoId = documento.id,
-                        nuevaUri = nuevaUri,
-                        correoFuncionario = funcionario.correo
-                    )
-
-                if (versionActual != versionEstado) {
-                    return@ejecutarEscritura
-                }
+                if (versionActual != versionEstado) return@ejecutarEscritura
 
                 if (filasActualizadas == 0) {
-                    _mensaje.value =
-                        "El documento ya no está observado o no te pertenece."
-                    cargarMisDocumentos(funcionario.correo)
-                    return@ejecutarEscritura
+                    _mensaje.value = "El documento ya no está observado o no te pertenece."
+                } else {
+                    _mensaje.value = "Documento reenviado para revisión."
                 }
-
-                _mensaje.value =
-                    "Documento reenviado para revisión."
-
                 cargarMisDocumentos(funcionario.correo)
 
-            } catch (e: CancellationException) {
-                throw e
+            } catch (e: CancellationException) { throw e
             } catch (e: Exception) {
-                if (versionActual == versionEstado) {
-                    _mensaje.value =
-                        "Error al reenviar documento: ${e.message}"
-                }
+                if (versionActual == versionEstado) _mensaje.value = "Error al reenviar documento: ${e.message}"
             }
         }
     }
 
-    // Registrar documento laboral desde Recursos Humanos.
+    // Permite a Recursos Humanos subir un contrato o anexo (queda validado automáticamente)
     fun registrarDocumentoLaboral(
-        nombre: String,
-        tipo: String,
-        uriArchivo: String,
-        correoFuncionario: String
+        nombre: String, tipo: String, uriArchivo: String, correoFuncionario: String
     ) {
-        if (_guardandoDocumentoLaboral.value) {
+        if (_guardandoDocumentoLaboral.value) return
+
+        if (nombre.isBlank() || tipo.isBlank() || uriArchivo.isBlank() || correoFuncionario.isBlank()) {
+            _mensaje.value = "Completa todos los datos del documento."
             return
         }
 
-        if (
-            nombre.isBlank() ||
-            tipo.isBlank() ||
-            uriArchivo.isBlank() ||
-            correoFuncionario.isBlank()
-        ) {
-            _mensaje.value =
-                "Completa todos los datos del documento."
-            return
-        }
-
-        if (
-            tipo !in listOf(
-                "Contrato",
-                "Anexo",
-                "Decreto",
-                "Resolución"
-            )
-        ) {
-            _mensaje.value =
-                "Selecciona un tipo de documento válido."
+        if (tipo !in listOf("Contrato", "Anexo", "Decreto", "Resolución")) {
+            _mensaje.value = "Selecciona un tipo de documento válido."
             return
         }
 
@@ -597,46 +341,19 @@ class DocumentosViewModel(
 
         ejecutarEscritura { versionActual ->
             try {
-                val rrhh =
-                    usuarioAutorizado(
-                        "Recursos Humanos",
-                        versionActual
-                    )
-
+                val rrhh = usuarioAutorizado("Recursos Humanos", versionActual)
                 if (rrhh == null) {
                     mostrarSinPermiso(versionActual)
                     return@ejecutarEscritura
                 }
 
-                val correoNormalizado =
-                    correoFuncionario.trim().lowercase()
+                val correoNormalizado = correoFuncionario.trim().lowercase()
+                val funcionario = usuarioRepository.obtenerUsuarioPorCorreo(correoNormalizado)
 
-                val funcionario =
-                    usuarioRepository.obtenerUsuarioPorCorreo(
-                        correoNormalizado
-                    )
+                if (versionActual != versionEstado) return@ejecutarEscritura
 
-                if (versionActual != versionEstado) {
-                    return@ejecutarEscritura
-                }
-
-                if (
-                    funcionario == null ||
-                    funcionario.rol != "Funcionario" ||
-                    !funcionario.activo
-                ) {
-                    _mensaje.value =
-                        "Selecciona un funcionario registrado y activo."
-                    return@ejecutarEscritura
-                }
-
-                if (
-                    usuarioAutorizado(
-                        "Recursos Humanos",
-                        versionActual
-                    ) == null
-                ) {
-                    mostrarSinPermiso(versionActual)
+                if (funcionario == null || funcionario.rol != "Funcionario" || !funcionario.activo) {
+                    _mensaje.value = "Selecciona un funcionario registrado y activo."
                     return@ejecutarEscritura
                 }
 
@@ -645,98 +362,58 @@ class DocumentosViewModel(
                     tipo = tipo,
                     uriArchivo = uriArchivo,
                     correoFuncionario = correoNormalizado,
-                    estado = "Validado",
+                    estado = "Validado", // Nace validado porque lo sube RRHH
                     comentarioRevision = ""
                 )
 
-                val documentoId =
-                    repository.insertarDocumento(documento)
-
-                if (versionActual != versionEstado) {
-                    return@ejecutarEscritura
-                }
+                val documentoId = repository.insertarDocumento(documento)
+                if (versionActual != versionEstado) return@ejecutarEscritura
 
                 if (documentoId <= 0L) {
-                    _mensaje.value =
-                        "No se pudo registrar el documento laboral."
+                    _mensaje.value = "No se pudo registrar el documento laboral."
                     return@ejecutarEscritura
                 }
 
-                _mensaje.value =
-                    "Documento laboral registrado y validado correctamente."
-
-                _ultimoDocumentoLaboralRegistrado.value =
-                    documentoId
-
+                _mensaje.value = "Documento laboral registrado y validado correctamente."
+                _ultimoDocumentoLaboralRegistrado.value = documentoId
                 cargarTodosLosDocumentos()
 
-            } catch (e: CancellationException) {
-                throw e
+            } catch (e: CancellationException) { throw e
             } catch (e: Exception) {
-                if (versionActual == versionEstado) {
-                    _mensaje.value =
-                        "Error al registrar documento laboral: ${e.message}"
-                }
+                if (versionActual == versionEstado) _mensaje.value = "Error al registrar documento laboral: ${e.message}"
             } finally {
-                if (versionActual == versionEstado) {
-                    _guardandoDocumentoLaboral.value = false
-                }
+                if (versionActual == versionEstado) _guardandoDocumentoLaboral.value = false
             }
         }
     }
 
-    // Cargar funcionarios activos para RRHH.
+    // Carga la lista de funcionarios activos para que Recursos Humanos pueda seleccionarlos
     fun cargarFuncionariosActivos() {
         ejecutarConsulta { versionActual ->
             try {
-                val rrhh =
-                    usuarioAutorizado(
-                        "Recursos Humanos",
-                        versionActual
-                    )
-
+                val rrhh = usuarioAutorizado("Recursos Humanos", versionActual)
                 if (rrhh == null) {
                     _funcionariosActivos.value = emptyList()
                     mostrarSinPermiso(versionActual)
                     return@ejecutarConsulta
                 }
 
-                val funcionarios =
-                    usuarioRepository.obtenerFuncionariosActivos()
+                val funcionarios = usuarioRepository.obtenerFuncionariosActivos()
+                if (versionActual == versionEstado) _funcionariosActivos.value = funcionarios
 
-                if (
-                    versionActual == versionEstado &&
-                    SesionUsuario.obtenerUsuarioActual()?.correo ==
-                    rrhh.correo
-                ) {
-                    _funcionariosActivos.value = funcionarios
-                }
-
-            } catch (e: CancellationException) {
-                throw e
+            } catch (e: CancellationException) { throw e
             } catch (e: Exception) {
-                if (versionActual == versionEstado) {
-                    _mensaje.value =
-                        "Error al cargar funcionarios: ${e.message}"
-                }
+                if (versionActual == versionEstado) _mensaje.value = "Error al cargar funcionarios: ${e.message}"
             }
         }
     }
 
-    // Limpiar únicamente los datos temporales de la sesión.
-    // No elimina documentos ni funcionarios guardados en Room.
+    // Borra los datos en la memoria de la pantalla al cerrar sesión (no borra la base de datos)
     fun limpiarEstadoSesion() {
+        versionEstado++ // Cancela cualquier consulta pendiente
 
-        versionEstado++
-
-        trabajosConsulta.forEach { trabajo ->
-            trabajo.cancel()
-        }
-
-        trabajosEscritura.forEach { trabajo ->
-            trabajo.cancel()
-        }
-
+        trabajosConsulta.forEach { it.cancel() }
+        trabajosEscritura.forEach { it.cancel() }
         trabajosConsulta.clear()
         trabajosEscritura.clear()
 
@@ -746,11 +423,8 @@ class DocumentosViewModel(
         _funcionariosActivos.value = emptyList()
 
         _mensaje.value = ""
-
-        // NUEVO: limpiar estados del registro personal.
         _guardandoDocumento.value = false
         _ultimoDocumentoRegistrado.value = null
-
         _guardandoDocumentoLaboral.value = false
         _ultimoDocumentoLaboralRegistrado.value = null
     }
