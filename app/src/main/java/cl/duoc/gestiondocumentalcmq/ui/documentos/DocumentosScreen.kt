@@ -14,6 +14,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -430,6 +431,41 @@ fun DocumentosScreen(
         }
 
         Spacer(Modifier.height(4.dp))
+
+        // Novedad visual: Tarjeta resumen con contadores de estado de documentos
+        if (documentos.isNotEmpty()) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = SoftPink
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    horizontalArrangement = Arrangement.SpaceAround
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Total", fontSize = 12.sp, color = MediumBrown)
+                        Text("${documentos.size}", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = DarkBrown)
+                    }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Validados", fontSize = 12.sp, color = MediumBrown)
+                        Text("${documentos.count { it.estado == "Validado" }}", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = DarkBrown)
+                    }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Pendientes", fontSize = 12.sp, color = MediumBrown)
+                        Text("${documentos.count { it.estado == "Pendiente de revisión" }}", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = DarkBrown)
+                    }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Observados", fontSize = 12.sp, color = MediumBrown)
+                        Text("${documentos.count { it.estado == "Observado" }}", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = DarkBrown)
+                    }
+                }
+            }
+        }
 
         Text(
             text = "Documentos registrados",
