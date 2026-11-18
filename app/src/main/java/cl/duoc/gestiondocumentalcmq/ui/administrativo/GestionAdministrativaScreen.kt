@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -25,6 +24,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
@@ -37,7 +37,6 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -53,12 +52,12 @@ import cl.duoc.gestiondocumentalcmq.viewmodel.DocumentosViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GestionAdministrativaScreen(
-    documentosViewModel: DocumentosViewModel
+    documentosViewModel: DocumentosViewModel,
+    correoAdministrativo: String = ""
 ) {
-    val funcionarios by documentosViewModel.funcionariosActivos.collectAsState()
-    val todosLosDocumentos by documentosViewModel.todosLosDocumentos.collectAsState()
+    val funcionariosAsignados by documentosViewModel.funcionariosAsignados.collectAsState()
+    val documentosAsignados by documentosViewModel.documentosAsignados.collectAsState()
     val mensaje by documentosViewModel.mensaje.collectAsState()
-    val guardando by documentosViewModel.guardandoDocumentoLaboral.collectAsState()
 
     var pestannaSeleccionada by remember { mutableIntStateOf(0) }
 
@@ -67,7 +66,7 @@ fun GestionAdministrativaScreen(
     var menuFuncionariosExpandido by remember { mutableStateOf(false) }
 
     var nombreDocumento by remember { mutableStateOf("") }
-    var tipoDocumentoSeleccionado by remember { mutableStateOf("Contrato laboral") }
+    var tipoDocumentoSeleccionado by remember { mutableStateOf("Contrato y anexos") }
     var menuTiposExpandido by remember { mutableStateOf(false) }
 
     var uriArchivo by remember { mutableStateOf("") }
@@ -95,9 +94,11 @@ fun GestionAdministrativaScreen(
 
     val destinosDerivacion = listOf("Jefatura", "Recursos Humanos")
 
-    LaunchedEffect(Unit) {
-        documentosViewModel.cargarFuncionariosActivos()
-        documentosViewModel.cargarTodosLosDocumentos()
+    LaunchedEffect(correoAdministrativo) {
+        if (correoAdministrativo.isNotBlank()) {
+            documentosViewModel.cargarFuncionariosAsignados(correoAdministrativo)
+            documentosViewModel.cargarDocumentosAsignados(correoAdministrativo)
+        }
     }
 
     Column(
@@ -113,11 +114,25 @@ fun GestionAdministrativaScreen(
             color = DarkBrown
         )
 
-        Text(
-            text = "Carga, clasificación, asociación y derivación de documentos asignados",
-            fontSize = 14.sp,
-            color = MediumBrown
-        )
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = LightPink,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text(
+                    text = "Ámbito Autorizado: Documentación de funcionarios, centros o unidades asignadas.",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = DarkBrown
+                )
+                Text(
+                    text = "Sin acceso transversal por defecto. Solo consulta, carga y actualiza dentro de su ámbito autorizado.",
+                    fontSize = 12.sp,
+                    color = MediumBrown
+                )
+            }
+        }
 
         TabRow(selectedTabIndex = pestannaSeleccionada) {
             Tab(
@@ -132,13 +147,9 @@ fun GestionAdministrativaScreen(
             )
         }
 
-        if (guardando) {
-            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-        }
-
         when (pestannaSeleccionada) {
             0 -> {
-                // Formulario de Carga y Clasificación por el Administrativo
+                // Formulario de Carga y Clasificación por el Administrativo dentro de su Ámbito Autorizado
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -155,13 +166,13 @@ fun GestionAdministrativaScreen(
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             Text(
-                                text = "Asociar documento a funcionario",
+                                text = "Asociar documento a funcionario asignado",
                                 fontSize = 17.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = DarkBrown
                             )
 
-                            // Selector de Funcionario
+                            // Selector de Funcionario Asignado
                             ExposedDropdownMenuBox(
                                 expanded = menuFuncionariosExpandido,
                                 onExpandedChange = { menuFuncionariosExpandido = !menuFuncionariosExpandido }
@@ -170,7 +181,7 @@ fun GestionAdministrativaScreen(
                                     value = funcionarioSeleccionadoCorreo,
                                     onValueChange = {},
                                     readOnly = true,
-                                    label = { Text("Seleccionar Funcionario asignado") },
+                                    label = { Text("Seleccionar Funcionario en ámbito autorizado") },
                                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = menuFuncionariosExpandido) },
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -182,13 +193,13 @@ fun GestionAdministrativaScreen(
                                     expanded = menuFuncionariosExpandido,
                                     onDismissRequest = { menuFuncionariosExpandido = false }
                                 ) {
-                                    if (funcionarios.isEmpty()) {
+                                    if (funcionariosAsignados.isEmpty()) {
                                         DropdownMenuItem(
-                                            text = { Text("No hay funcionarios disponibles") },
+                                            text = { Text("No hay funcionarios asignados a su ámbito") },
                                             onClick = { menuFuncionariosExpandido = false }
                                         )
                                     } else {
-                                        funcionarios.forEach { func ->
+                                        funcionariosAsignados.forEach { func ->
                                             DropdownMenuItem(
                                                 text = { Text("${func.nombre} (${func.correo})") },
                                                 onClick = {
@@ -282,13 +293,15 @@ fun GestionAdministrativaScreen(
                                 onClick = {
                                     if (nombreDocumento.isNotBlank() &&
                                         funcionarioSeleccionadoCorreo.isNotBlank() &&
-                                        uriArchivo.isNotBlank()
+                                        uriArchivo.isNotBlank() &&
+                                        correoAdministrativo.isNotBlank()
                                     ) {
-                                        documentosViewModel.guardarDocumento(
+                                        documentosViewModel.guardarDocumentoAdministrativo(
                                             nombre = nombreDocumento,
                                             tipo = tipoDocumentoSeleccionado,
                                             uriArchivo = uriArchivo,
-                                            correoFuncionario = funcionarioSeleccionadoCorreo
+                                            correoFuncionario = funcionarioSeleccionadoCorreo,
+                                            correoAdministrativo = correoAdministrativo
                                         )
 
                                         nombreDocumento = ""
@@ -306,7 +319,7 @@ fun GestionAdministrativaScreen(
                                         funcionarioSeleccionadoCorreo.isNotBlank() &&
                                         uriArchivo.isNotBlank()
                             ) {
-                                Text("Registrar y derivar documento")
+                                Text("Cargar y asociar documento")
                             }
                         }
                     }
@@ -314,8 +327,8 @@ fun GestionAdministrativaScreen(
             }
 
             1 -> {
-                // Consulta y Derivación de la Documentación Asignada
-                val documentosFiltrados = todosLosDocumentos.filter { doc ->
+                // Consulta y Actualización de la Documentación en Ámbito Autorizado
+                val documentosFiltrados = documentosAsignados.filter { doc ->
                     val coincideBusqueda = doc.nombre.contains(busqueda, ignoreCase = true) ||
                             doc.correoFuncionario.contains(busqueda, ignoreCase = true) ||
                             doc.tipo.contains(busqueda, ignoreCase = true)
@@ -327,21 +340,21 @@ fun GestionAdministrativaScreen(
                     OutlinedTextField(
                         value = busqueda,
                         onValueChange = { busqueda = it },
-                        label = { Text("Buscar por funcionario, nombre o tipo") },
+                        label = { Text("Buscar en documentación asignada") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         shape = RoundedCornerShape(16.dp)
                     )
 
                     Text(
-                        text = "Documentos asignados encontrados: ${documentosFiltrados.size}",
+                        text = "Documentos asignados en su ámbito: ${documentosFiltrados.size}",
                         fontSize = 13.sp,
                         color = MediumBrown
                     )
 
                     if (documentosFiltrados.isEmpty()) {
                         Text(
-                            text = "No hay documentación asignada que coincida con los criterios.",
+                            text = "No hay documentación dentro de su ámbito autorizado que coincida con la búsqueda.",
                             fontSize = 14.sp,
                             color = MediumBrown
                         )
@@ -371,7 +384,7 @@ fun GestionAdministrativaScreen(
                                         )
 
                                         Text(
-                                            text = "Funcionario: ${doc.correoFuncionario}",
+                                            text = "Funcionario asignado: ${doc.correoFuncionario}",
                                             fontSize = 13.sp,
                                             color = MediumBrown
                                         )
@@ -404,7 +417,7 @@ fun GestionAdministrativaScreen(
                                                 modifier = Modifier.weight(1f),
                                                 shape = RoundedCornerShape(12.dp)
                                             ) {
-                                                Text("Derivar antecedentes")
+                                                Text("Actualizar / Derivar antecedentes")
                                             }
                                         }
                                     }
@@ -417,14 +430,14 @@ fun GestionAdministrativaScreen(
         }
     }
 
-    // Modal Derivar Documento a Jefatura / RRHH
+    // Modal Actualizar / Derivar Documento a Jefatura / RRHH
     if (mostrandoDialogoDerivar && documentoParaDerivar != null) {
         AlertDialog(
             onDismissRequest = { mostrandoDialogoDerivar = false },
-            title = { Text("Derivar documento para revisión") },
+            title = { Text("Actualizar / Derivar antecedente") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Selecciona el destinatario de la derivación:")
+                    Text("Selecciona el destinatario dentro del flujo autorizado:")
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         destinosDerivacion.forEach { dest ->
                             FilterChip(
@@ -437,7 +450,7 @@ fun GestionAdministrativaScreen(
                     OutlinedTextField(
                         value = notaDerivacion,
                         onValueChange = { notaDerivacion = it },
-                        label = { Text("Nota de verificación de antecedentes") },
+                        label = { Text("Nota de actualización / verificación") },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
                     )
@@ -447,25 +460,19 @@ fun GestionAdministrativaScreen(
                 TextButton(
                     onClick = {
                         val doc = documentoParaDerivar
-                        if (doc != null) {
-                            val comentario = if (notaDerivacion.isNotBlank()) {
-                                "Derivado a $nuevoDestinoDerivacion por Administrativo: $notaDerivacion"
-                            } else {
-                                "Derivado a $nuevoDestinoDerivacion por Administrativo"
-                            }
-
-                            // Usamos el metodo de revisión seguro para actualizar trazabilidad y derivación
-                            documentosViewModel.revisarDocumento(
+                        if (doc != null && correoAdministrativo.isNotBlank()) {
+                            documentosViewModel.derivarDocumentoAdministrativo(
                                 documento = doc,
-                                nuevoEstado = "Pendiente de revisión",
-                                comentario = comentario
+                                nuevoDestino = nuevoDestinoDerivacion,
+                                notaDerivacion = notaDerivacion,
+                                correoAdministrativo = correoAdministrativo
                             )
                             mostrandoDialogoDerivar = false
                             documentoParaDerivar = null
                         }
                     }
                 ) {
-                    Text("Confirmar derivación")
+                    Text("Confirmar actualización")
                 }
             },
             dismissButton = {
@@ -483,7 +490,9 @@ fun GestionAdministrativaScreen(
             text = { Text(mensaje) },
             confirmButton = {
                 TextButton(onClick = {
-                    documentosViewModel.cargarTodosLosDocumentos()
+                    if (correoAdministrativo.isNotBlank()) {
+                        documentosViewModel.cargarDocumentosAsignados(correoAdministrativo)
+                    }
                 }) {
                     Text("Aceptar")
                 }

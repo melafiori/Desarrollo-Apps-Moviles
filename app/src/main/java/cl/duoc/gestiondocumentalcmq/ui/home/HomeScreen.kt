@@ -153,14 +153,14 @@ fun HomeScreen(
 
                 TarjetaMenu(
                     titulo = "Documentación asignada",
-                    descripcion = "Carga, clasifica y gestiona documentos asignados",
+                    descripcion = "Consulta, carga y actualiza la documentación de funcionarios, centros o unidades asignadas (Ámbito Autorizado)",
                     icono = Icons.Default.Description,
                     onClick = onDocumentosClick
                 )
 
                 TarjetaMenu(
                     titulo = "Solicitudes asignadas",
-                    descripcion = "Deriva y consulta el estado de las solicitudes asignadas",
+                    descripcion = "Deriva y consulta las solicitudes dentro de su ámbito autorizado",
                     icono = Icons.Default.EventNote,
                     onClick = onSolicitudesClick
                 )
@@ -241,15 +241,15 @@ fun HomeScreen(
             "Administrador" -> {
 
                 TarjetaMenu(
-                    titulo = "Gestión de usuarios",
-                    descripcion = "Crea, edita y administra las cuentas y roles del sistema",
+                    titulo = "Gestión de usuarios y perfiles",
+                    descripcion = "Gestión de usuarios, perfiles, permisos y configuraciones técnicas y administrativas",
                     icono = Icons.Default.People,
                     onClick = onGestionUsuariosClick
                 )
 
                 TarjetaMenu(
-                    titulo = "Auditoría",
-                    descripcion = "Consulta los registros del sistema",
+                    titulo = "Auditoría del sistema",
+                    descripcion = "Registros técnicos y de seguridad del sistema (Sin acceso al contenido de documentos)",
                     icono = Icons.Default.History,
                     onClick = onAuditoriaClick
                 )

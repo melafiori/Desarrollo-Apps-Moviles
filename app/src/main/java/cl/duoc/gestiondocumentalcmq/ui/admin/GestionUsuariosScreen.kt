@@ -106,7 +106,7 @@ fun GestionUsuariosScreen(
         )
 
         Text(
-            text = "Administra las cuentas y los roles del sistema.",
+            text = "Información técnica y administrativa para gestionar usuarios, perfiles, permisos y configuraciones.",
             fontSize = 14.sp,
             color = MediumBrown
         )

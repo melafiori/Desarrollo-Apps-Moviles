@@ -36,6 +36,17 @@ interface DocumentoDao {
     """)
     suspend fun obtenerTodosLosDocumentos(): List<DocumentoEntity>
 
+    // Obtener documentos de los funcionarios del ámbito autorizado del Administrativo.
+    // No transversal: filtra estrictamente por los correos asignados.
+    @Query("""
+        SELECT * FROM documentos
+        WHERE correoFuncionario IN (:correosFuncionarios)
+        ORDER BY fechaCarga DESC, id DESC
+    """)
+    suspend fun obtenerDocumentosPorFuncionarios(
+        correosFuncionarios: List<String>
+    ): List<DocumentoEntity>
+
     // Obtener documentos pendientes de revisión.
     // Ordenados del más antiguo al más reciente (primero los que llevan más espera)
     @Query("""

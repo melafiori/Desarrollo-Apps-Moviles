@@ -75,7 +75,12 @@ class DocumentosViewModel(
     // Muestra un mensaje de error si el usuario intenta hacer algo sin permiso
     private fun mostrarSinPermiso(versionActual: Long) {
         if (versionActual == versionEstado) {
-            _mensaje.value = "No tienes permisos para realizar esta operación."
+            val sesion = SesionUsuario.obtenerUsuarioActual()
+            if (sesion?.rol == "Administrador") {
+                _mensaje.value = "Acceso denegado: El Administrador del Sistema gestiona usuarios, perfiles, permisos y configuraciones, pero no tiene acceso automático al contenido de los documentos."
+            } else {
+                _mensaje.value = "No tienes permisos para realizar esta operación."
+            }
         }
     }
 
@@ -86,9 +91,17 @@ class DocumentosViewModel(
     private val _funcionariosActivos = MutableStateFlow<List<UsuarioEntity>>(emptyList())
     val funcionariosActivos = _funcionariosActivos.asStateFlow()
 
+    // Lista de funcionarios asignados en ámbito autorizado (para Administrativo)
+    private val _funcionariosAsignados = MutableStateFlow<List<UsuarioEntity>>(emptyList())
+    val funcionariosAsignados = _funcionariosAsignados.asStateFlow()
+
     // Lista de documentos del usuario actual
     private val _misDocumentos = MutableStateFlow<List<DocumentoEntity>>(emptyList())
     val misDocumentos = _misDocumentos.asStateFlow()
+
+    // Lista de documentos asignados al ámbito autorizado del Administrativo
+    private val _documentosAsignados = MutableStateFlow<List<DocumentoEntity>>(emptyList())
+    val documentosAsignados = _documentosAsignados.asStateFlow()
 
     // Lista de documentos que necesitan revisión (para el Revisor)
     private val _documentosPendientes = MutableStateFlow<List<DocumentoEntity>>(emptyList())
@@ -410,6 +423,161 @@ class DocumentosViewModel(
         }
     }
 
+    // --- MÉTODOS PARA PERFIL ADMINISTRATIVO (Ámbito Autorizado, No Transversal por Defecto) ---
+
+    // Carga funcionarios asignados expresamente al ámbito autorizado del Administrativo
+    fun cargarFuncionariosAsignados(correoAdministrativo: String) {
+        ejecutarConsulta { versionActual ->
+            try {
+                val admin = usuarioAutorizado("Administrativo", versionActual)
+                if (admin == null || correoAdministrativo.trim().lowercase() != admin.correo) {
+                    _funcionariosAsignados.value = emptyList()
+                    mostrarSinPermiso(versionActual)
+                    return@ejecutarConsulta
+                }
+
+                val asignados = usuarioRepository.obtenerFuncionariosAsignados(admin.correo)
+                if (versionActual == versionEstado) _funcionariosAsignados.value = asignados
+
+            } catch (e: CancellationException) { throw e
+            } catch (e: Exception) {
+                if (versionActual == versionEstado) _mensaje.value = "Error al cargar funcionarios asignados: ${e.message}"
+            }
+        }
+    }
+
+    // Carga únicamente la documentación dentro del ámbito autorizado del Administrativo (sin acceso transversal)
+    fun cargarDocumentosAsignados(correoAdministrativo: String) {
+        ejecutarConsulta { versionActual ->
+            try {
+                val admin = usuarioAutorizado("Administrativo", versionActual)
+                if (admin == null || correoAdministrativo.trim().lowercase() != admin.correo) {
+                    _documentosAsignados.value = emptyList()
+                    mostrarSinPermiso(versionActual)
+                    return@ejecutarConsulta
+                }
+
+                val funcionarios = usuarioRepository.obtenerFuncionariosAsignados(admin.correo)
+                val correosAsignados = funcionarios.map { it.correo }
+                val documentos = repository.obtenerDocumentosPorFuncionarios(correosAsignados)
+
+                if (versionActual == versionEstado) _documentosAsignados.value = documentos
+
+            } catch (e: CancellationException) { throw e
+            } catch (e: Exception) {
+                if (versionActual == versionEstado) _mensaje.value = "Error al cargar documentos asignados: ${e.message}"
+            }
+        }
+    }
+
+    // Cargar y asociar documento a un funcionario dentro del ámbito autorizado del Administrativo
+    fun guardarDocumentoAdministrativo(
+        nombre: String,
+        tipo: String,
+        uriArchivo: String,
+        correoFuncionario: String,
+        correoAdministrativo: String
+    ) {
+        if (nombre.isBlank() || tipo.isBlank() || uriArchivo.isBlank() || correoFuncionario.isBlank()) {
+            _mensaje.value = "Completa los datos del documento."
+            return
+        }
+
+        ejecutarEscritura { versionActual ->
+            try {
+                val admin = usuarioAutorizado("Administrativo", versionActual)
+                if (admin == null || correoAdministrativo.trim().lowercase() != admin.correo) {
+                    mostrarSinPermiso(versionActual)
+                    return@ejecutarEscritura
+                }
+
+                val correoFunc = correoFuncionario.trim().lowercase()
+                val funcionarios = usuarioRepository.obtenerFuncionariosAsignados(admin.correo)
+                val esAsignado = funcionarios.any { it.correo == correoFunc }
+
+                if (!esAsignado) {
+                    _mensaje.value = "El funcionario $correoFunc está fuera de su ámbito autorizado."
+                    return@ejecutarEscritura
+                }
+
+                val documento = DocumentoEntity(
+                    nombre = nombre.trim(),
+                    tipo = tipo.trim(),
+                    uriArchivo = uriArchivo,
+                    correoFuncionario = correoFunc,
+                    estado = "Pendiente de revisión",
+                    comentarioRevision = "Cargado por Administrativo: ${admin.correo}"
+                )
+
+                val docId = repository.insertarDocumento(documento)
+                if (versionActual != versionEstado) return@ejecutarEscritura
+
+                if (docId <= 0L) {
+                    _mensaje.value = "No se pudo registrar el documento."
+                    return@ejecutarEscritura
+                }
+
+                _mensaje.value = "Documento registrado correctamente dentro de su ámbito autorizado."
+                cargarDocumentosAsignados(admin.correo)
+
+            } catch (e: CancellationException) { throw e
+            } catch (e: Exception) {
+                if (versionActual == versionEstado) _mensaje.value = "Error al registrar documento: ${e.message}"
+            }
+        }
+    }
+
+    // Actualizar / Derivar documento dentro del ámbito autorizado del Administrativo
+    fun derivarDocumentoAdministrativo(
+        documento: DocumentoEntity,
+        nuevoDestino: String,
+        notaDerivacion: String,
+        correoAdministrativo: String
+    ) {
+        ejecutarEscritura { versionActual ->
+            try {
+                val admin = usuarioAutorizado("Administrativo", versionActual)
+                if (admin == null || correoAdministrativo.trim().lowercase() != admin.correo) {
+                    mostrarSinPermiso(versionActual)
+                    return@ejecutarEscritura
+                }
+
+                val funcionarios = usuarioRepository.obtenerFuncionariosAsignados(admin.correo)
+                val esAsignado = funcionarios.any { it.correo == documento.correoFuncionario }
+
+                if (!esAsignado) {
+                    _mensaje.value = "No tiene autorización para actualizar o derivar este documento."
+                    return@ejecutarEscritura
+                }
+
+                val nota = if (notaDerivacion.isNotBlank()) {
+                    "Derivado a $nuevoDestino por Administrativo: $notaDerivacion"
+                } else {
+                    "Derivado a $nuevoDestino por Administrativo"
+                }
+
+                val resultado = repository.revisarDocumentoSeguro(
+                    documentoId = documento.id,
+                    nuevoEstado = "Pendiente de revisión",
+                    comentario = nota
+                )
+
+                if (versionActual != versionEstado) return@ejecutarEscritura
+
+                if (resultado == 0) {
+                    _mensaje.value = "No se pudo derivar el documento."
+                } else {
+                    _mensaje.value = "Documento derivado a $nuevoDestino correctamente."
+                }
+                cargarDocumentosAsignados(admin.correo)
+
+            } catch (e: CancellationException) { throw e
+            } catch (e: Exception) {
+                if (versionActual == versionEstado) _mensaje.value = "Error al derivar documento: ${e.message}"
+            }
+        }
+    }
+
     // Borra los datos en la memoria de la pantalla al cerrar sesión (no borra la base de datos)
     fun limpiarEstadoSesion() {
         versionEstado++ // Cancela cualquier consulta pendiente
@@ -423,6 +591,8 @@ class DocumentosViewModel(
         _documentosPendientes.value = emptyList()
         _todosLosDocumentos.value = emptyList()
         _funcionariosActivos.value = emptyList()
+        _funcionariosAsignados.value = emptyList()
+        _documentosAsignados.value = emptyList()
 
         _mensaje.value = ""
         _guardandoDocumento.value = false

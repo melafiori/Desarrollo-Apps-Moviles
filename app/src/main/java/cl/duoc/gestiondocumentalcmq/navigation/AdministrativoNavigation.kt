@@ -24,10 +24,11 @@ fun NavGraphBuilder.administrativoNavigation(
         val rol by loginViewModel.rol.collectAsState()
         val loginExitoso by loginViewModel.loginExitoso.collectAsState()
 
-        if (loginExitoso && (rol == "Administrativo" || rol == "Recursos Humanos") && correo.isNotBlank()) {
+        if (loginExitoso && rol == "Administrativo" && correo.isNotBlank()) {
 
             GestionAdministrativaScreen(
-                documentosViewModel = documentosViewModel
+                documentosViewModel = documentosViewModel,
+                correoAdministrativo = correo
             )
 
         } else {

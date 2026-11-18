@@ -28,6 +28,16 @@ class DocumentoRepository(
         return dao.obtenerTodosLosDocumentos()
     }
 
+    // Obtener documentos dentro del ámbito autorizado de un Administrativo.
+    suspend fun obtenerDocumentosPorFuncionarios(
+        correosFuncionarios: List<String>
+    ): List<DocumentoEntity> {
+        if (correosFuncionarios.isEmpty()) return emptyList()
+        return dao.obtenerDocumentosPorFuncionarios(
+            correosFuncionarios.map { it.trim().lowercase() }
+        )
+    }
+
     // Obtener documentos pendientes de revisión.
     suspend fun obtenerDocumentosPendientes(): List<DocumentoEntity> {
         return dao.obtenerDocumentosPendientes()

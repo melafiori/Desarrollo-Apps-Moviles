@@ -321,7 +321,7 @@ fun NavGraphBuilder.rrhhNavigation(
         val rol by loginViewModel.rol.collectAsState()
         val loginExitoso by loginViewModel.loginExitoso.collectAsState()
 
-        if (loginExitoso && (rol == "Recursos Humanos" || rol == "Jefatura" || rol == "Administrador")) {
+        if (loginExitoso && (rol == "Recursos Humanos" || rol == "Jefatura")) {
             RevisarModificacionesScreen(
                 modificacionesViewModel = modificacionesViewModel,
                 correoRevisorActual = correo
