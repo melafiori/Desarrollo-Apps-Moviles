@@ -45,7 +45,11 @@ fun NavGraphBuilder.generalNavigation(
                             navController.navigate("documentos")
                         }
 
-                        "Revisor" -> {
+                        "Administrativo" -> {
+                            navController.navigate("gestionAdministrativa")
+                        }
+
+                        "Jefatura" -> {
                             navController.navigate("revisarDocumentos")
                         }
 
@@ -62,7 +66,11 @@ fun NavGraphBuilder.generalNavigation(
                             navController.navigate("solicitudes")
                         }
 
-                        "Revisor" -> {
+                        "Administrativo" -> {
+                            navController.navigate("gestionAdministrativa")
+                        }
+
+                        "Jefatura" -> {
                             navController.navigate("revisarSolicitudes")
                         }
 
@@ -100,9 +108,9 @@ fun NavGraphBuilder.generalNavigation(
                     navController.navigate("notificaciones")
                 },
 
-                // Botón Auditoría: solo Administrador
+                // Botón Auditoría: Administrador y TI/Ciberseguridad
                 onAuditoriaClick = {
-                    if (rol == "Administrador") {
+                    if (rol == "Administrador" || rol == "TI/Ciberseguridad") {
                         navController.navigate("auditoria")
                     }
                 },

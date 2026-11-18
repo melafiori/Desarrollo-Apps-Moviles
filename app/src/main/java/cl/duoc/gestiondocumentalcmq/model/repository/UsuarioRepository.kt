@@ -85,4 +85,28 @@ class UsuarioRepository(
     suspend fun contarAdministradoresActivos(): Int {
         return usuarioDao.contarAdministradoresActivos()
     }
+
+    // Actualizar teléfono de contacto.
+    suspend fun actualizarTelefonoUsuario(
+        correo: String,
+        telefono: String
+    ): Boolean {
+        return usuarioDao.actualizarTelefonoUsuario(
+            correo = correo.trim().lowercase(),
+            telefono = telefono.trim()
+        ) > 0
+    }
+
+    // Actualizar datos personales oficiales (nombre, RUT).
+    suspend fun actualizarDatosOficialesUsuario(
+        correo: String,
+        nombre: String,
+        rut: String
+    ): Boolean {
+        return usuarioDao.actualizarDatosOficialesUsuario(
+            correo = correo.trim().lowercase(),
+            nombre = nombre.trim(),
+            rut = rut.trim()
+        ) > 0
+    }
 }

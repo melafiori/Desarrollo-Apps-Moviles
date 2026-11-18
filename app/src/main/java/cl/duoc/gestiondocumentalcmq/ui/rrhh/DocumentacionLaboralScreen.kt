@@ -21,7 +21,8 @@ import cl.duoc.gestiondocumentalcmq.ui.theme.White
 fun DocumentacionLaboralScreen(
     onExpedientesClick: () -> Unit,
     onRegistrarDocumentoClick: () -> Unit,
-    onDocumentosValidadosClick: () -> Unit
+    onDocumentosValidadosClick: () -> Unit,
+    onRevisarModificacionesClick: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -38,7 +39,7 @@ fun DocumentacionLaboralScreen(
         )
 
         Text(
-            text = "Gestión de antecedentes laborales de funcionarios",
+            text = "Gestión de antecedentes laborales y modificaciones de datos",
             color = MediumBrown,
             fontSize = 14.sp
         )
@@ -61,6 +62,12 @@ fun DocumentacionLaboralScreen(
             titulo = "Documentos validados",
             descripcion = "Consultar documentación previamente validada",
             onClick = onDocumentosValidadosClick
+        )
+
+        OpcionRRHH(
+            titulo = "Modificaciones de información (RF12)",
+            descripcion = "Evaluar y revisar solicitudes de cambio de datos oficiales de funcionarios",
+            onClick = onRevisarModificacionesClick
         )
     }
 }

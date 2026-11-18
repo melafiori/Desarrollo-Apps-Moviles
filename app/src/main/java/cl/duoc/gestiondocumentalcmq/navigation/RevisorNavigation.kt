@@ -12,7 +12,7 @@ import cl.duoc.gestiondocumentalcmq.viewmodel.DocumentosViewModel
 import cl.duoc.gestiondocumentalcmq.viewmodel.LoginViewModel
 import cl.duoc.gestiondocumentalcmq.viewmodel.SolicitudesViewModel
 
-// Define las rutas de navegación exclusivas del revisor
+// Define las rutas de navegación para revisión de documentos y solicitudes (Jefatura)
 fun NavGraphBuilder.revisorNavigation(
     navController: NavHostController,
     documentosViewModel: DocumentosViewModel,
@@ -20,7 +20,7 @@ fun NavGraphBuilder.revisorNavigation(
     loginViewModel: LoginViewModel
 ) {
 
-    // REVISAR DOCUMENTOS
+    // REVISAR DOCUMENTOS - JEFATURA
     composable("revisarDocumentos") {
 
         // Datos de la sesión actual (se actualizan solos)
@@ -28,10 +28,10 @@ fun NavGraphBuilder.revisorNavigation(
         val rol by loginViewModel.rol.collectAsState()
         val loginExitoso by loginViewModel.loginExitoso.collectAsState()
 
-        // Solo entra si inició sesión y es Revisor
+        // Solo entra si inició sesión y es Jefatura o Recursos Humanos
         if (
             loginExitoso &&
-            rol == "Revisor" &&
+            (rol == "Jefatura" || rol == "Recursos Humanos") &&
             correo.isNotBlank()
         ) {
 
@@ -56,7 +56,7 @@ fun NavGraphBuilder.revisorNavigation(
         }
     }
 
-    // REVISAR SOLICITUDES
+    // REVISAR SOLICITUDES - JEFATURA
     composable("revisarSolicitudes") {
 
         // Datos de la sesión actual
@@ -64,10 +64,10 @@ fun NavGraphBuilder.revisorNavigation(
         val rol by loginViewModel.rol.collectAsState()
         val loginExitoso by loginViewModel.loginExitoso.collectAsState()
 
-        // Solo entra si inició sesión y es Revisor
+        // Solo entra si inició sesión y es Jefatura o Recursos Humanos
         if (
             loginExitoso &&
-            rol == "Revisor" &&
+            (rol == "Jefatura" || rol == "Recursos Humanos") &&
             correo.isNotBlank()
         ) {
 

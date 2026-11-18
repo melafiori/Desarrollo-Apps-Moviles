@@ -20,6 +20,7 @@ import cl.duoc.gestiondocumentalcmq.viewmodel.CapacitacionesViewModel
 import cl.duoc.gestiondocumentalcmq.viewmodel.CapacitacionesViewModelFactory
 import cl.duoc.gestiondocumentalcmq.viewmodel.DocumentosViewModel
 import cl.duoc.gestiondocumentalcmq.viewmodel.LoginViewModel
+import cl.duoc.gestiondocumentalcmq.viewmodel.ModificacionesViewModel
 import cl.duoc.gestiondocumentalcmq.viewmodel.SolicitudesViewModel
 import cl.duoc.gestiondocumentalcmq.viewmodel.SolicitudesViewModelFactory
 import cl.duoc.gestiondocumentalcmq.viewmodel.UsuariosAdminViewModel
@@ -41,6 +42,13 @@ fun AppNavigation() {
     // VIEWMODEL DE AUTENTICACIÓN
     // Se crea con la Application porque la necesita para funcionar
     val loginViewModel: LoginViewModel = viewModel(
+        factory = ViewModelProvider.AndroidViewModelFactory.getInstance(
+            context.applicationContext as Application
+        )
+    )
+
+    // VIEWMODEL DE MODIFICACIONES (RF12)
+    val modificacionesViewModel: ModificacionesViewModel = viewModel(
         factory = ViewModelProvider.AndroidViewModelFactory.getInstance(
             context.applicationContext as Application
         )
@@ -172,6 +180,13 @@ fun AppNavigation() {
             usuariosAdminViewModel = usuariosAdminViewModel
         )
 
+        // RUTAS DE ADMINISTRATIVO
+        administrativoNavigation(
+            navController = navController,
+            documentosViewModel = documentosViewModel,
+            loginViewModel = loginViewModel
+        )
+
         // RUTAS DEL FUNCIONARIO
         funcionarioNavigation(
             navController = navController,
@@ -195,6 +210,7 @@ fun AppNavigation() {
             documentosViewModel = documentosViewModel,
             solicitudesViewModel = solicitudesViewModel,
             capacitacionesViewModel = capacitacionesViewModel,
+            modificacionesViewModel = modificacionesViewModel,
             loginViewModel = loginViewModel
         )
 

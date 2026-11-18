@@ -11,5 +11,7 @@ data class UsuarioEntity(
     val contrasennaHash: String,
     val contrasennaSalt: String,
     val rol: String,
-    val activo: Boolean = true
+    val activo: Boolean = true,
+    val telefono: String = "",
+    val rut: String = ""
 )

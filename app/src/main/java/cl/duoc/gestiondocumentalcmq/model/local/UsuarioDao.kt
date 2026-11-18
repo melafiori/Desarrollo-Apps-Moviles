@@ -109,13 +109,39 @@ interface UsuarioDao {
         correo: String
     ): Int
 
+    // Actualizar teléfono de contacto.
+    @Query("""
+        UPDATE usuarios
+        SET telefono = :telefono
+        WHERE correo = :correo
+    """)
+    suspend fun actualizarTelefonoUsuario(
+        correo: String,
+        telefono: String
+    ): Int
+
+    // Actualizar datos personales oficiales (nombre, RUT).
+    @Query("""
+        UPDATE usuarios
+        SET nombre = :nombre,
+            rut = :rut
+        WHERE correo = :correo
+    """)
+    suspend fun actualizarDatosOficialesUsuario(
+        correo: String,
+        nombre: String,
+        rut: String
+    ): Int
+
     // Comprobar que el rol corresponda a uno de los perfiles del sistema.
     fun rolValido(rol: String): Boolean {
         return rol in listOf(
             "Funcionario",
-            "Revisor",
+            "Jefatura",
+            "Administrativo",
             "Recursos Humanos",
-            "Administrador"
+            "Administrador",
+            "TI/Ciberseguridad"
         )
     }
 

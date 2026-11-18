@@ -121,6 +121,33 @@ object DatabaseProvider {
         }
     }
 
+    // Migración 7 a 8:
+    // Agregar campos teléfono y RUT a usuarios y crear la tabla solicitudes_modificacion (RF12).
+    private val MIGRATION_7_8 = object : Migration(7, 8) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE usuarios ADD COLUMN telefono TEXT NOT NULL DEFAULT ''")
+            db.execSQL("ALTER TABLE usuarios ADD COLUMN rut TEXT NOT NULL DEFAULT ''")
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `solicitudes_modificacion` (
+                    `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    `correoSolicitante` TEXT NOT NULL,
+                    `tipoModificacion` TEXT NOT NULL,
+                    `campoAfectado` TEXT NOT NULL,
+                    `valorAnterior` TEXT NOT NULL,
+                    `valorNuevo` TEXT NOT NULL,
+                    `estado` TEXT NOT NULL,
+                    `fechaSolicitud` INTEGER NOT NULL,
+                    `usuarioRevisor` TEXT NOT NULL,
+                    `fechaRevision` INTEGER,
+                    `motivoRechazo` TEXT NOT NULL,
+                    `observaciones` TEXT NOT NULL
+                )
+                """.trimIndent()
+            )
+        }
+    }
+
     // Obtener una única instancia de la base de datos.
     fun obtenerDatabase(context: Context): SolicitudDatabase {
         return database ?: synchronized(this) {
@@ -135,7 +162,8 @@ object DatabaseProvider {
                     MIGRATION_3_4,
                     MIGRATION_4_5,
                     MIGRATION_5_6,
-                    MIGRATION_6_7
+                    MIGRATION_6_7,
+                    MIGRATION_7_8
                 )
                 .build()
                 .also { database = it }

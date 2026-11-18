@@ -118,19 +118,19 @@ fun HomeScreen(
                 )
             }
 
-            // REVISOR
-            "Revisor" -> {
+            // JEFATURA
+            "Jefatura" -> {
 
                 TarjetaMenu(
-                    titulo = "Revisar documentos",
-                    descripcion = "Consulta y revisa los antecedentes",
+                    titulo = "Documentos del equipo",
+                    descripcion = "Consulta los documentos de los funcionarios de su equipo",
                     icono = Icons.Default.Description,
                     onClick = onDocumentosClick
                 )
 
                 TarjetaMenu(
-                    titulo = "Revisar solicitudes",
-                    descripcion = "Consulta las solicitudes registradas",
+                    titulo = "Solicitudes del equipo",
+                    descripcion = "Revisa y aprueba o rechaza solicitudes de su dependencia",
                     icono = Icons.Default.EventNote,
                     onClick = onSolicitudesClick
                 )
@@ -139,6 +139,59 @@ fun HomeScreen(
                     titulo = "Historial",
                     icono = Icons.Default.History,
                     onClick = onHistorialClick
+                )
+
+                TarjetaPequena(
+                    titulo = "Mi perfil",
+                    icono = Icons.Default.Person,
+                    onClick = onPerfilClick
+                )
+            }
+
+            // ADMINISTRATIVO
+            "Administrativo" -> {
+
+                TarjetaMenu(
+                    titulo = "Documentación asignada",
+                    descripcion = "Carga, clasifica y gestiona documentos asignados",
+                    icono = Icons.Default.Description,
+                    onClick = onDocumentosClick
+                )
+
+                TarjetaMenu(
+                    titulo = "Solicitudes asignadas",
+                    descripcion = "Deriva y consulta el estado de las solicitudes asignadas",
+                    icono = Icons.Default.EventNote,
+                    onClick = onSolicitudesClick
+                )
+
+                TarjetaPequena(
+                    titulo = "Notificaciones",
+                    icono = Icons.Default.Notifications,
+                    onClick = onNotificacionesClick
+                )
+
+                TarjetaPequena(
+                    titulo = "Mi perfil",
+                    icono = Icons.Default.Person,
+                    onClick = onPerfilClick
+                )
+            }
+
+            // TI / CIBERSEGURIDAD
+            "TI/Ciberseguridad" -> {
+
+                TarjetaMenu(
+                    titulo = "Auditoría y Seguridad",
+                    descripcion = "Revisión de registros técnicos y controles de acceso",
+                    icono = Icons.Default.History,
+                    onClick = onAuditoriaClick
+                )
+
+                TarjetaPequena(
+                    titulo = "Notificaciones",
+                    icono = Icons.Default.Notifications,
+                    onClick = onNotificacionesClick
                 )
 
                 TarjetaPequena(

@@ -29,10 +29,10 @@ fun NavGraphBuilder.adminNavigation(
         val rol by loginViewModel.rol.collectAsState()
         val loginExitoso by loginViewModel.loginExitoso.collectAsState()
 
-        // Solo entra si inició sesión y es Administrador
+        // Solo entra si inició sesión y es Administrador o TI/Ciberseguridad
         if (
             loginExitoso &&
-            rol == "Administrador" &&
+            (rol == "Administrador" || rol == "TI/Ciberseguridad") &&
             correo.isNotBlank()
         ) {
 

@@ -15,13 +15,18 @@ object UsuariosIniciales {
         val cuentas = listOf(
             Triple(
                 "funcionario@cmq.test",
-                "Funcionario",
+                "Funcionario Demo",
                 "Funcionario"
             ),
             Triple(
-                "revisor@cmq.test",
-                "Revisor",
-                "Revisor"
+                "jefatura@cmq.test",
+                "Jefatura Directa",
+                "Jefatura"
+            ),
+            Triple(
+                "administrativo@cmq.test",
+                "Administrativo Salud",
+                "Administrativo"
             ),
             Triple(
                 "rrhh@cmq.test",
@@ -30,8 +35,13 @@ object UsuariosIniciales {
             ),
             Triple(
                 "administrador@cmq.test",
-                "Administrador",
+                "Administrador del Sistema",
                 "Administrador"
+            ),
+            Triple(
+                "ticiber@cmq.test",
+                "Soporte TI / Ciberseguridad",
+                "TI/Ciberseguridad"
             )
         )
 
@@ -45,9 +55,11 @@ object UsuariosIniciales {
                 // Contraseña de prueba según el tipo de cuenta.
                 val contrasenna = when (rol) {
                     "Funcionario" -> "funcionario"
-                    "Revisor" -> "revisor"
+                    "Jefatura" -> "jefatura"
+                    "Administrativo" -> "administrativo"
                     "Recursos Humanos" -> "rrhh"
                     "Administrador" -> "administrador"
+                    "TI/Ciberseguridad" -> "ticiber"
                     else -> return@forEach
                 }
 

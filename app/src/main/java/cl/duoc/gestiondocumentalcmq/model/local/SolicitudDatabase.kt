@@ -11,9 +11,10 @@ import cl.duoc.gestiondocumentalcmq.model.entities.RegistroAuditoria
         RevisionSolicitudEntity::class,
         DocumentoEntity::class,
         UsuarioEntity::class,
-        CapacitacionEntity::class
+        CapacitacionEntity::class,
+        SolicitudModificacionEntity::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = false
 )
 abstract class SolicitudDatabase : RoomDatabase() {
@@ -29,4 +30,6 @@ abstract class SolicitudDatabase : RoomDatabase() {
     abstract fun usuarioDao(): UsuarioDao
 
     abstract fun capacitacionDao(): CapacitacionDao
+
+    abstract fun solicitudModificacionDao(): SolicitudModificacionDao
 }

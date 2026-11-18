@@ -23,9 +23,11 @@ class UsuariosAdminViewModel(
     // Roles autorizados del sistema.
     val rolesDisponibles = listOf(
         "Funcionario",
-        "Revisor",
+        "Jefatura",
+        "Administrativo",
         "Recursos Humanos",
-        "Administrador"
+        "Administrador",
+        "TI/Ciberseguridad"
     )
 
     private val _usuarios =

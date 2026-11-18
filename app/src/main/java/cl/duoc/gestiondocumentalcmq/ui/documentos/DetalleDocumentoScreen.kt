@@ -34,7 +34,7 @@ fun DetalleDocumentoScreen(
         Text(text = "Tipo: ${documento.tipo}")
         Text(text = "Estado: $estadoActual")
 
-        if (rol == "Revisor" && estadoActual == "Pendiente") {
+        if (rol == "Jefatura" && estadoActual == "Pendiente") {
             Button(
                 onClick = {
                     estadoActual = "En revisión"

@@ -14,9 +14,11 @@ import cl.duoc.gestiondocumentalcmq.ui.rrhh.ExpedientesLaboralesScreen
 import cl.duoc.gestiondocumentalcmq.ui.rrhh.RegistrarCapacitacionScreen
 import cl.duoc.gestiondocumentalcmq.ui.rrhh.RegistrarDocumentoLaboralScreen
 import cl.duoc.gestiondocumentalcmq.ui.rrhh.SolicitudesRRHHScreen
+import cl.duoc.gestiondocumentalcmq.ui.rrhh.RevisarModificacionesScreen
 import cl.duoc.gestiondocumentalcmq.viewmodel.CapacitacionesViewModel
 import cl.duoc.gestiondocumentalcmq.viewmodel.DocumentosViewModel
 import cl.duoc.gestiondocumentalcmq.viewmodel.LoginViewModel
+import cl.duoc.gestiondocumentalcmq.viewmodel.ModificacionesViewModel
 import cl.duoc.gestiondocumentalcmq.viewmodel.SolicitudesViewModel
 
 // Define las rutas de navegación exclusivas de Recursos Humanos
@@ -25,6 +27,7 @@ fun NavGraphBuilder.rrhhNavigation(
     documentosViewModel: DocumentosViewModel,
     solicitudesViewModel: SolicitudesViewModel,
     capacitacionesViewModel: CapacitacionesViewModel,
+    modificacionesViewModel: ModificacionesViewModel,
     loginViewModel: LoginViewModel
 ) {
 
@@ -50,6 +53,10 @@ fun NavGraphBuilder.rrhhNavigation(
                 // Botón para ver los documentos validados
                 onDocumentosValidadosClick = {
                     navController.navigate("documentosValidados")
+                },
+                // Botón para revisar solicitudes de modificación (RF12)
+                onRevisarModificacionesClick = {
+                    navController.navigate("revisarModificaciones")
                 }
             )
 
@@ -302,6 +309,27 @@ fun NavGraphBuilder.rrhhNavigation(
                     popUpTo(navController.graph.id) {
                         inclusive = true
                     }
+                    launchSingleTop = true
+                }
+            }
+        }
+    }
+
+    // REVISAR MODIFICACIONES - RRHH (RF12)
+    composable("revisarModificaciones") {
+        val correo by loginViewModel.correo.collectAsState()
+        val rol by loginViewModel.rol.collectAsState()
+        val loginExitoso by loginViewModel.loginExitoso.collectAsState()
+
+        if (loginExitoso && (rol == "Recursos Humanos" || rol == "Jefatura" || rol == "Administrador")) {
+            RevisarModificacionesScreen(
+                modificacionesViewModel = modificacionesViewModel,
+                correoRevisorActual = correo
+            )
+        } else {
+            LaunchedEffect(loginExitoso, rol) {
+                navController.navigate(if (loginExitoso) "home" else "login") {
+                    popUpTo(navController.graph.id) { inclusive = true }
                     launchSingleTop = true
                 }
             }

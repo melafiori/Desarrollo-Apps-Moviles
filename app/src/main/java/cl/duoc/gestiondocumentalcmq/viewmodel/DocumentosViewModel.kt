@@ -142,12 +142,13 @@ class DocumentosViewModel(
         }
     }
 
-    // Busca y carga los documentos que el Revisor tiene que aprobar o rechazar
+    // Busca y carga los documentos que la Jefatura tiene que aprobar o rechazar
     fun cargarDocumentosPendientes() {
         ejecutarConsulta { versionActual ->
             try {
-                val revisor = usuarioAutorizado("Revisor", versionActual)
-                if (revisor == null) {
+                val jefatura = usuarioAutorizado("Jefatura", versionActual)
+                    ?: usuarioAutorizado("Recursos Humanos", versionActual)
+                if (jefatura == null) {
                     _documentosPendientes.value = emptyList()
                     mostrarSinPermiso(versionActual)
                     return@ejecutarConsulta
@@ -252,8 +253,9 @@ class DocumentosViewModel(
 
         ejecutarEscritura { versionActual ->
             try {
-                val revisor = usuarioAutorizado("Revisor", versionActual)
-                if (revisor == null) {
+                val jefatura = usuarioAutorizado("Jefatura", versionActual)
+                    ?: usuarioAutorizado("Recursos Humanos", versionActual)
+                if (jefatura == null) {
                     mostrarSinPermiso(versionActual)
                     return@ejecutarEscritura
                 }
